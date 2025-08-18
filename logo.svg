@@ -1,0 +1,27 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="32" fill="#6C63FF"/>
+  <circle cx="64" cy="64" r="44" fill="#FFF"/>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#B39DFF"/>
+      <stop offset="100%" stop-color="#6C63FF"/>
+    </radialGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="32" fill="url(#bg)"/>
+  <ellipse cx="64" cy="64" rx="45" ry="45" fill="#fff" fill-opacity="0.13"/>
+  <ellipse cx="64" cy="64" rx="35" ry="35" fill="#fff" fill-opacity="0.09"/>
+  <g>
+    <path d="M40 90 Q50 60 64 60 Q78 60 88 90" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="54" cy="54" rx="6" ry="8" fill="#fff" stroke="#6C63FF" stroke-width="3"/>
+    <ellipse cx="74" cy="54" rx="6" ry="8" fill="#fff" stroke="#6C63FF" stroke-width="3"/>
+    <ellipse cx="54" cy="54" rx="2" ry="3" fill="#6C63FF"/>
+    <ellipse cx="74" cy="54" rx="2" ry="3" fill="#6C63FF"/>
+    <path d="M60 85 Q64 95 68 85" stroke="#6C63FF" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g>
+  <text x="50%" y="120" text-anchor="middle" fill="#fff" font-size="24" font-family="Segoe UI, Arial, sans-serif" font-weight="bold" letter-spacing="1">DoroLang</text>
+  <rect width="128" height="128" rx="32" fill="url(#shine)"/>
+</svg>
