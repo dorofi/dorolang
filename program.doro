@@ -1,14 +1,8 @@
 #переменные начинаются с kas
 #вывод данных в консоль say
 
-kas name1 = "Dorofii"
-kas age = 20
-
-say "Name: " + name1
-say "Age: " + age
-
-kas namee = "Kas"
-kas agee = 19
-
-say "Name: " + namee
-say "Age: " + agee
+say "DoroLang is working!"
+kas my_variable = "Hello, DoroLang!"
+say my_variable
+kas number = 42
+say "The number is: " + number

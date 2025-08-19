@@ -1,33 +1,17 @@
+"""
+DoroLang Parser - Синтаксический анализатор
+Строит абстрактное синтаксическое дерево (AST) из токенов
+
+Автор: Dorofii Karnaukh
+"""
+
 from abc import ABC, abstractmethod
-from typing import List, Optional, Union
+from typing import List, Optional
 from dataclasses import dataclass
 
-# Импортируем наш лексер
-from enum import Enum, auto
-import re
+# Импортируем токены из лексера
+from lexer import Token, TokenType
 
-# Копируем определения из лексера (в реальном проекте это было бы в отдельных файлах)
-class TokenType(Enum):
-    NUMBER = auto()
-    STRING = auto()
-    IDENTIFIER = auto()
-    PRINT = auto()
-    LET = auto()
-    ASSIGN = auto()
-    PLUS = auto()
-    MINUS = auto()
-    MULTIPLY = auto()
-    DIVIDE = auto()
-    NEWLINE = auto()
-    EOF = auto()
-    UNKNOWN = auto()
-
-@dataclass
-class Token:
-    type: TokenType
-    value: str
-    line: int
-    column: int
 
 # ============== AST NODE DEFINITIONS ==============
 
@@ -35,23 +19,27 @@ class ASTNode(ABC):
     """Базовый класс для всех узлов AST"""
     pass
 
+
 class Expression(ASTNode):
-    """Базовый класс для всех выражений"""
+    """Базовый класс для всех выражений (возвращают значение)"""
     pass
+
 
 class Statement(ASTNode):
-    """Базовый класс для всех утверждений"""
+    """Базовый класс для всех утверждений (выполняют действия)"""
     pass
 
-# EXPRESSIONS (выражения - то что возвращает значение)
+
+# ============== EXPRESSIONS ==============
 
 @dataclass
 class NumberLiteral(Expression):
     """Числовой литерал: 42, 3.14"""
-    value: Union[int, float]
+    value: float
     
     def __str__(self):
         return f"Number({self.value})"
+
 
 @dataclass
 class StringLiteral(Expression):
@@ -59,7 +47,8 @@ class StringLiteral(Expression):
     value: str
     
     def __str__(self):
-        return f"String({self.value})"
+        return f'String("{self.value}")'
+
 
 @dataclass
 class Identifier(Expression):
@@ -68,6 +57,7 @@ class Identifier(Expression):
     
     def __str__(self):
         return f"Var({self.name})"
+
 
 @dataclass
 class BinaryOperation(Expression):
@@ -79,24 +69,46 @@ class BinaryOperation(Expression):
     def __str__(self):
         return f"({self.left} {self.operator} {self.right})"
 
-# STATEMENTS (утверждения - то что выполняет действия)
 
 @dataclass
-class PrintStatement(Statement):
-    """Print утверждение: print expression"""
+class UnaryOperation(Expression):
+    """Унарные операции: -x, +y"""
+    operator: str
+    operand: Expression
+    
+    def __str__(self):
+        return f"({self.operator}{self.operand})"
+
+
+@dataclass
+class ParenthesizedExpression(Expression):
+    """Выражения в скобках: (expression)"""
     expression: Expression
     
     def __str__(self):
-        return f"Print({self.expression})"
+        return f"({self.expression})"
+
+
+# ============== STATEMENTS ==============
+
+@dataclass
+class SayStatement(Statement):
+    """Say утверждение: say expression"""
+    expression: Expression
+    
+    def __str__(self):
+        return f"Say({self.expression})"
+
 
 @dataclass
 class AssignmentStatement(Statement):
-    """Присваивание: let name = expression"""
+    """Присваивание: kas name = expression"""
     identifier: str
     expression: Expression
     
     def __str__(self):
         return f"Assign({self.identifier} = {self.expression})"
+
 
 @dataclass
 class Program(ASTNode):
@@ -107,6 +119,7 @@ class Program(ASTNode):
         statements_str = "\n  ".join(str(stmt) for stmt in self.statements)
         return f"Program:\n  {statements_str}"
 
+
 # ============== PARSER ==============
 
 class ParseError(Exception):
@@ -114,9 +127,27 @@ class ParseError(Exception):
     def __init__(self, message: str, token: Token):
         self.message = message
         self.token = token
-        super().__init__(f"{message} at line {token.line}, column {token.column}")
+        super().__init__(f"Parse Error: {message} at line {token.line}:{token.column}")
+
 
 class Parser:
+    """
+    Синтаксический анализатор для DoroLang
+    
+    Использует рекурсивный спуск для построения AST
+    Грамматика (приоритет операторов):
+    
+    program        → statement*
+    statement      → sayStatement | assignStatement
+    sayStatement   → "say" expression
+    assignStatement → "kas" IDENTIFIER "=" expression
+    expression     → addition
+    addition       → multiplication (("+" | "-") multiplication)*
+    multiplication → unary (("*" | "/" | "%") unary)*
+    unary          → ("-" | "+") unary | primary
+    primary        → NUMBER | STRING | IDENTIFIER | "(" expression ")"
+    """
+    
     def __init__(self, tokens: List[Token]):
         self.tokens = tokens
         self.position = 0
@@ -141,9 +172,9 @@ class Parser:
             self.position += 1
         return current
     
-    def match(self, expected_type: TokenType) -> bool:
-        """Проверяет соответствие текущего токена ожидаемому типу"""
-        return self.current_token().type == expected_type
+    def match(self, *expected_types: TokenType) -> bool:
+        """Проверяет соответствие текущего токена любому из ожидаемых типов"""
+        return self.current_token().type in expected_types
     
     def consume(self, expected_type: TokenType, error_message: str = "") -> Token:
         """Потребляет токен ожидаемого типа или выбрасывает ошибку"""
@@ -151,7 +182,8 @@ class Parser:
             return self.advance()
         
         if not error_message:
-            error_message = f"Expected {expected_type.name}, got {self.current_token().type.name}"
+            error_message = (f"Expected {expected_type.name}, "
+                           f"got {self.current_token().type.name} '{self.current_token().value}'")
         
         raise ParseError(error_message, self.current_token())
     
@@ -161,7 +193,15 @@ class Parser:
             self.advance()
     
     def parse(self) -> Program:
-        """Главный метод парсинга - парсит всю программу"""
+        """
+        Главный метод парсинга - парсит всю программу
+        
+        Returns:
+            Program: Корневой узел AST
+            
+        Raises:
+            ParseError: При синтаксических ошибках
+        """
         statements = []
         
         self.skip_newlines()  # Пропускаем пустые строки в начале
@@ -173,40 +213,43 @@ class Parser:
             
             try:
                 stmt = self.parse_statement()
-                statements.append(stmt)
+                if stmt:  # Проверяем что утверждение не None
+                    statements.append(stmt)
             except ParseError as e:
-                print(f"Parse error: {e}")
-                # Пропускаем до следующей строки для восстановления
-                while not self.match(TokenType.NEWLINE) and not self.match(TokenType.EOF):
+                # Восстановление после ошибки - пропускаем до следующей строки
+                print(f"❌ {e}")
+                while not self.match(TokenType.NEWLINE, TokenType.EOF):
                     self.advance()
         
         return Program(statements)
     
-    def parse_statement(self) -> Statement:
+    def parse_statement(self) -> Optional[Statement]:
         """Парсит одно утверждение"""
-        # Print statement
-        if self.match(TokenType.PRINT):
-            return self.parse_print_statement()
-        
-        # Assignment statement (let x = ...)
-        elif self.match(TokenType.LET):
+        if self.match(TokenType.SAY):
+            return self.parse_say_statement()
+        elif self.match(TokenType.KAS):
             return self.parse_assignment_statement()
-        
         else:
-            raise ParseError(f"Unexpected token: {self.current_token().value}", self.current_token())
+            raise ParseError(
+                f"Unexpected token: '{self.current_token().value}'", 
+                self.current_token()
+            )
     
-    def parse_print_statement(self) -> PrintStatement:
-        """Парсит print утверждение"""
-        self.consume(TokenType.PRINT)  # Потребляем 'print'
-        expression = self.parse_expression()  # Парсим выражение для печати
-        return PrintStatement(expression)
+    def parse_say_statement(self) -> SayStatement:
+        """Парсит say утверждение"""
+        self.consume(TokenType.SAY)  # Потребляем 'say'
+        expression = self.parse_expression()  # Парсим выражение для вывода
+        return SayStatement(expression)
     
     def parse_assignment_statement(self) -> AssignmentStatement:
-        """Парсит присваивание: let name = expression"""
-        self.consume(TokenType.LET)  # Потребляем 'let'
+        """Парсит присваивание: kas name = expression"""
+        self.consume(TokenType.KAS)  # Потребляем 'kas'
         
         # Получаем имя переменной
-        identifier_token = self.consume(TokenType.IDENTIFIER, "Expected variable name after 'let'")
+        identifier_token = self.consume(
+            TokenType.IDENTIFIER, 
+            "Expected variable name after 'kas'"
+        )
         identifier_name = identifier_token.value
         
         # Потребляем знак присваивания
@@ -218,14 +261,14 @@ class Parser:
         return AssignmentStatement(identifier_name, expression)
     
     def parse_expression(self) -> Expression:
-        """Парсит выражение (с учетом приоритета операторов)"""
+        """Парсит выражение (точка входа в иерархию приоритетов)"""
         return self.parse_addition()
     
     def parse_addition(self) -> Expression:
         """Парсит сложение и вычитание (низший приоритет)"""
         left = self.parse_multiplication()
         
-        while self.match(TokenType.PLUS) or self.match(TokenType.MINUS):
+        while self.match(TokenType.PLUS, TokenType.MINUS):
             operator = self.advance().value
             right = self.parse_multiplication()
             left = BinaryOperation(left, operator, right)
@@ -233,32 +276,44 @@ class Parser:
         return left
     
     def parse_multiplication(self) -> Expression:
-        """Парсит умножение и деление (высший приоритет)"""
-        left = self.parse_primary()
+        """Парсит умножение, деление и модulo (средний приоритет)"""
+        left = self.parse_unary()
         
-        while self.match(TokenType.MULTIPLY) or self.match(TokenType.DIVIDE):
+        while self.match(TokenType.MULTIPLY, TokenType.DIVIDE, TokenType.MODULO):
             operator = self.advance().value
-            right = self.parse_primary()
+            right = self.parse_unary()
             left = BinaryOperation(left, operator, right)
         
         return left
     
+    def parse_unary(self) -> Expression:
+        """Парсит унарные операции (высший приоритет)"""
+        if self.match(TokenType.MINUS, TokenType.PLUS):
+            operator = self.advance().value
+            operand = self.parse_unary()  # Рекурсивный вызов для поддержки --x
+            return UnaryOperation(operator, operand)
+        
+        return self.parse_primary()
+    
     def parse_primary(self) -> Expression:
-        """Парсит первичные выражения (числа, строки, переменные)"""
+        """Парсит первичные выражения"""
+        # Скобки
+        if self.match(TokenType.LPAREN):
+            self.advance()  # consume '('
+            expr = self.parse_expression()
+            self.consume(TokenType.RPAREN, "Expected ')' after expression")
+            return ParenthesizedExpression(expr)
+        
         # Числа
-        if self.match(TokenType.NUMBER):
+        elif self.match(TokenType.NUMBER):
             token = self.advance()
-            # Определяем int или float
-            if '.' in token.value:
-                return NumberLiteral(float(token.value))
-            else:
-                return NumberLiteral(int(token.value))
+            return NumberLiteral(float(token.value))
         
         # Строки
         elif self.match(TokenType.STRING):
             token = self.advance()
-            # Убираем кавычки
-            string_value = token.value[1:-1]  # Убираем первый и последний символ (кавычки)
+            # Обрабатываем строковый литерал (убираем кавычки и escape)
+            string_value = self._process_string_literal(token.value)
             return StringLiteral(string_value)
         
         # Идентификаторы (переменные)
@@ -267,8 +322,25 @@ class Parser:
             return Identifier(token.value)
         
         else:
-            raise ParseError(f"Unexpected token in expression: {self.current_token().value}", 
-                           self.current_token())
+            raise ParseError(
+                f"Unexpected token in expression: '{self.current_token().value}'", 
+                self.current_token()
+            )
+    
+    def _process_string_literal(self, raw_string: str) -> str:
+        """Обрабатывает строковый литерал (убирает кавычки и обрабатывает escape)"""
+        # Убираем внешние кавычки
+        content = raw_string[1:-1]
+        
+        # Простая обработка escape-последовательностей
+        content = content.replace('\\n', '\n')
+        content = content.replace('\\t', '\t')
+        content = content.replace('\\r', '\r')
+        content = content.replace('\\\\', '\\')
+        content = content.replace('\\"', '"')
+        content = content.replace("\\'", "'")
+        
+        return content
     
     def pretty_print_ast(self, node: ASTNode, indent: int = 0) -> None:
         """Красиво выводит AST дерево"""
@@ -279,8 +351,8 @@ class Parser:
             for stmt in node.statements:
                 self.pretty_print_ast(stmt, indent + 1)
         
-        elif isinstance(node, PrintStatement):
-            print(f"{prefix}PrintStatement:")
+        elif isinstance(node, SayStatement):
+            print(f"{prefix}SayStatement:")
             self.pretty_print_ast(node.expression, indent + 1)
         
         elif isinstance(node, AssignmentStatement):
@@ -288,9 +360,19 @@ class Parser:
             self.pretty_print_ast(node.expression, indent + 1)
         
         elif isinstance(node, BinaryOperation):
-            print(f"{prefix}BinaryOp: {node.operator}")
-            self.pretty_print_ast(node.left, indent + 1)
-            self.pretty_print_ast(node.right, indent + 1)
+            print(f"{prefix}BinaryOp: '{node.operator}'")
+            print(f"{prefix}  Left:")
+            self.pretty_print_ast(node.left, indent + 2)
+            print(f"{prefix}  Right:")
+            self.pretty_print_ast(node.right, indent + 2)
+        
+        elif isinstance(node, UnaryOperation):
+            print(f"{prefix}UnaryOp: '{node.operator}'")
+            self.pretty_print_ast(node.operand, indent + 1)
+        
+        elif isinstance(node, ParenthesizedExpression):
+            print(f"{prefix}Parentheses:")
+            self.pretty_print_ast(node.expression, indent + 1)
         
         elif isinstance(node, NumberLiteral):
             print(f"{prefix}Number: {node.value}")
@@ -302,106 +384,39 @@ class Parser:
             print(f"{prefix}Variable: {node.name}")
 
 
-# ============== ПРОСТОЙ ЛЕКСЕР ДЛЯ ТЕСТИРОВАНИЯ ==============
-
-class SimpleLexer:
-    """Упрощенная версия лексера для тестирования парсера"""
-    
-    def __init__(self, source_code: str):
-        self.source = source_code
-        self.position = 0
-        self.line = 1
-        self.column = 1
-        
-        self.token_patterns = [
-            (r'print', TokenType.PRINT),
-            (r'let', TokenType.LET),
-            (r'\d+\.?\d*', TokenType.NUMBER),
-            (r'"[^"]*"', TokenType.STRING),
-            (r"'[^']*'", TokenType.STRING),
-            (r'[a-zA-Z_][a-zA-Z0-9_]*', TokenType.IDENTIFIER),
-            (r'=', TokenType.ASSIGN),
-            (r'\+', TokenType.PLUS),
-            (r'-', TokenType.MINUS),
-            (r'\*', TokenType.MULTIPLY),
-            (r'/', TokenType.DIVIDE),
-            (r'\n', TokenType.NEWLINE),
-        ]
-    
-    def tokenize(self) -> List[Token]:
-        tokens = []
-        lines = self.source.split('\n')
-        
-        for line_num, line in enumerate(lines, 1):
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            
-            pos = 0
-            while pos < len(line):
-                if line[pos] == ' ':
-                    pos += 1
-                    continue
-                
-                found_match = False
-                for pattern, token_type in self.token_patterns:
-                    match = re.match(pattern, line[pos:])
-                    if match:
-                        value = match.group(0)
-                        tokens.append(Token(token_type, value, line_num, pos + 1))
-                        pos += len(value)
-                        found_match = True
-                        break
-                
-                if not found_match:
-                    pos += 1
-        
-        tokens.append(Token(TokenType.EOF, '', len(lines), 1))
-        return tokens
-
-
-# ============== ТЕСТИРОВАНИЕ ==============
-
+# Тестирование модуля
 if __name__ == "__main__":
-    # Тестовый код на DoroLang
+    from lexer import Lexer
+    
+    # Тестовый код
     test_code = '''
-print "Hello, DoroLang!"
-print 42
-let name = "Dorofii"
-print name
-let age = 25
-print age + 5
-print "Age is " + age
-let result = 10 * 2 + 3
-print result
+say "Parser test!"
+kas x = -(5 + 3) * 2
+kas y = (10 + 5) % 4
+kas z = -(-x + y)
+say "Result: " + z
 '''
     
-    print("=== ИСХОДНЫЙ КОД ===")
+    print("=== TESTING PARSER ===")
+    print("Source code:")
     print(test_code)
-    print("\n" + "="*50)
+    print("\n" + "="*40)
     
-    # Токенизация
-    lexer = SimpleLexer(test_code)
-    tokens = lexer.tokenize()
-    
-    print("\n=== ТОКЕНЫ ===")
-    for i, token in enumerate(tokens):
-        print(f"{i:2}: {token.type.name:12} '{token.value}'")
-    
-    print("\n" + "="*50)
-    
-    # Парсинг
-    parser = Parser(tokens)
     try:
-        ast = parser.parse()
+        # Токенизация
+        lexer = Lexer(test_code)
+        tokens = lexer.tokenize()
+        print(f"✅ Lexer: {len(tokens)} tokens")
         
-        print("\n=== ABSTRACT SYNTAX TREE ===")
+        # Парсинг
+        parser = Parser(tokens)
+        ast = parser.parse()
+        print(f"✅ Parser: {len(ast.statements)} statements")
+        
+        print("\n=== AST ===")
         parser.pretty_print_ast(ast)
         
-        print(f"\n=== СВОДКА ===")
-        print(f"✅ Токенов: {len(tokens)}")
-        print(f"✅ Утверждений: {len(ast.statements)}")
-        print("✅ Парсер готов! 🎉")
+        print("\n✅ Parser test passed!")
         
-    except ParseError as e:
-        print(f"\n❌ Ошибка парсинга: {e}")
+    except Exception as e:
+        print(f"❌ Error: {e}")
