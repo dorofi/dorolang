@@ -6,11 +6,11 @@ DoroLang Interpreter - Интерпретатор
 """
 
 from typing import Any, Dict, List
-from parser import (
+from parser import ( # noqa: E402
     ASTNode, Expression, Statement, Program,
-    NumberLiteral, StringLiteral, Identifier,
+    NumberLiteral, StringLiteral, BooleanLiteral, Identifier,
     BinaryOperation, UnaryOperation, ParenthesizedExpression,
-    SayStatement, AssignmentStatement
+    SayStatement, AssignmentStatement, IfStatement, BlockStatement
 )
 
 
@@ -83,23 +83,26 @@ class Interpreter:
         """
         self.output = []
         
-        for statement in program.statements:
-            try:
+        try:
+            for statement in program.statements:
                 self.execute_statement(statement)
-            except RuntimeError as e:
-                error_msg = f"❌ Runtime error: {e.message}"
-                print(error_msg)
-                self.output.append(error_msg)
-                # Продолжаем выполнение остальных утверждений
+        except RuntimeError as e:
+            error_msg = f"❌ Runtime error: {e.message}"
+            print(error_msg)
+            self.output.append(error_msg)
         
         return self.output
     
     def execute_statement(self, statement: Statement) -> None:
         """Выполняет утверждение"""
-        if isinstance(statement, SayStatement):
+        if isinstance(statement, IfStatement):
+            self.execute_if_statement(statement)
+        elif isinstance(statement, SayStatement):
             self.execute_say_statement(statement)
         elif isinstance(statement, AssignmentStatement):
             self.execute_assignment_statement(statement)
+        elif isinstance(statement, BlockStatement):
+            self.execute_block_statement(statement)
         else:
             raise RuntimeError(f"Unknown statement type: {type(statement).__name__}")
     
@@ -114,6 +117,21 @@ class Interpreter:
         """Выполняет присваивание"""
         value = self.evaluate_expression(statement.expression)
         self.environment.set(statement.identifier, value)
+
+    def execute_if_statement(self, statement: IfStatement) -> None:
+        """Выполняет if-else утверждение"""
+        condition_value = self.evaluate_expression(statement.condition)
+        if self._is_truthy(condition_value):
+            self.execute_statement(statement.then_branch)
+        elif statement.else_branch is not None:
+            self.execute_statement(statement.else_branch)
+
+    def execute_block_statement(self, statement: BlockStatement) -> None:
+        """Выполняет блок кода"""
+        # В будущем здесь можно будет создать новую область видимости
+        for stmt in statement.statements:
+            self.execute_statement(stmt)
+
     
     def evaluate_expression(self, expression: Expression) -> Any:
         """
@@ -132,6 +150,9 @@ class Interpreter:
             return expression.value
         
         elif isinstance(expression, StringLiteral):
+            return expression.value
+        
+        elif isinstance(expression, BooleanLiteral):
             return expression.value
         
         elif isinstance(expression, Identifier):
@@ -207,6 +228,35 @@ class Interpreter:
                     raise RuntimeError("Modulo by zero")
                 return left % right
         
+        # Операторы сравнения
+        elif operator in ['==', '!=', '<', '>', '<=', '>=']:
+            # Сравнение чисел
+            if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+                if operator == '==': return left == right
+                if operator == '!=': return left != right
+                if operator == '<': return left < right
+                if operator == '>': return left > right
+                if operator == '<=': return left <= right
+                if operator == '>=': return left >= right
+            
+            # Сравнение строк (только на равенство/неравенство)
+            elif isinstance(left, str) and isinstance(right, str):
+                if operator == '==': return left == right
+                if operator == '!=': return left != right
+                raise RuntimeError(f"Cannot apply '{operator}' to strings")
+            
+            # Сравнение булевых
+            elif isinstance(left, bool) and isinstance(right, bool):
+                if operator == '==': return left == right
+                if operator == '!=': return left != right
+                raise RuntimeError(f"Cannot apply '{operator}' to booleans")
+            
+            else:
+                # По умолчанию неравные типы не равны
+                if operator == '==': return False
+                if operator == '!=': return True
+                raise RuntimeError(f"Cannot compare {type(left).__name__} and {type(right).__name__}")
+        
         else:
             raise RuntimeError(f"Unknown binary operator: '{operator}'")
     
@@ -239,6 +289,16 @@ class Interpreter:
         else:
             raise RuntimeError(f"Unknown unary operator: '{operator}'")
     
+    def _is_truthy(self, value: Any) -> bool:
+        """Проверяет значение на 'истинность'"""
+        if value is None:
+            return False
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)) and value == 0:
+            return False
+        return True
+
     def reset(self) -> None:
         """Сбрасывает состояние интерпретатора"""
         self.environment.clear()

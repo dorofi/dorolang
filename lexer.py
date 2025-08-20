@@ -21,6 +21,10 @@ class TokenType(Enum):
     # Ключевые слова
     SAY = auto()        # say
     KAS = auto()        # kas
+    IF = auto()         # if
+    ELSE = auto()       # else
+    TRUE = auto()       # true
+    FALSE = auto()      # false
     
     # Операторы
     ASSIGN = auto()     # =
@@ -30,9 +34,19 @@ class TokenType(Enum):
     DIVIDE = auto()     # /
     MODULO = auto()     # %
     
+    # Операторы сравнения
+    EQ = auto()         # ==
+    NEQ = auto()        # !=
+    LT = auto()         # <
+    GT = auto()         # >
+    LTE = auto()        # <=
+    GTE = auto()        # >=
+    
     # Разделители
     LPAREN = auto()     # (
     RPAREN = auto()     # )
+    LBRACE = auto()     # {
+    RBRACE = auto()     # }
     
     # Специальные
     NEWLINE = auto()
@@ -80,6 +94,10 @@ class Lexer:
             # Ключевые слова (должны быть перед идентификаторами)
             (r'say\b', TokenType.SAY),
             (r'kas\b', TokenType.KAS),
+            (r'if\b', TokenType.IF),
+            (r'else\b', TokenType.ELSE),
+            (r'true\b', TokenType.TRUE),
+            (r'false\b', TokenType.FALSE),
             
             # Литералы
             (r'\d+\.?\d*', TokenType.NUMBER),
@@ -87,17 +105,25 @@ class Lexer:
             (r"'(?:[^'\\]|\\.)*'", TokenType.STRING),
             (r'[a-zA-Z_][a-zA-Z0-9_]*', TokenType.IDENTIFIER),
             
-            # Операторы
-            (r'=', TokenType.ASSIGN),
+            # Операторы (двухсимвольные сначала)
+            (r'==', TokenType.EQ),
+            (r'!=', TokenType.NEQ),
+            (r'<=', TokenType.LTE),
+            (r'>=', TokenType.GTE),
+            (r'=', TokenType.ASSIGN), # Односимвольный = после ==
             (r'\+', TokenType.PLUS),
             (r'-', TokenType.MINUS),
             (r'\*', TokenType.MULTIPLY),
             (r'/', TokenType.DIVIDE),
             (r'%', TokenType.MODULO),
+            (r'<', TokenType.LT),
+            (r'>', TokenType.GT),
             
             # Разделители
             (r'\(', TokenType.LPAREN),
             (r'\)', TokenType.RPAREN),
+            (r'\{', TokenType.LBRACE),
+            (r'\}', TokenType.RBRACE),
             
             # Специальные
             (r'\n', TokenType.NEWLINE),

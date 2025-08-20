@@ -42,6 +42,15 @@ class NumberLiteral(Expression):
 
 
 @dataclass
+class BooleanLiteral(Expression):
+    """Булев литерал: true, false"""
+    value: bool
+    
+    def __str__(self):
+        return f"Boolean({self.value})"
+
+
+@dataclass
 class StringLiteral(Expression):
     """Строковый литерал: "hello", 'world'"""
     value: str
@@ -111,6 +120,23 @@ class AssignmentStatement(Statement):
 
 
 @dataclass
+class BlockStatement(Statement):
+    """Блок кода: { statement* }"""
+    statements: List[Statement]
+    
+    def __str__(self):
+        return f"Block(...)"
+
+
+@dataclass
+class IfStatement(Statement):
+    """If-Else утверждение"""
+    condition: Expression
+    then_branch: BlockStatement
+    else_branch: Optional[Statement] # Может быть IfStatement или BlockStatement
+
+
+@dataclass
 class Program(ASTNode):
     """Корень программы - список утверждений"""
     statements: List[Statement]
@@ -137,15 +163,18 @@ class Parser:
     Использует рекурсивный спуск для построения AST
     Грамматика (приоритет операторов):
     
-    program        → statement*
-    statement      → sayStatement | assignStatement
-    sayStatement   → "say" expression
-    assignStatement → "kas" IDENTIFIER "=" expression
-    expression     → addition
-    addition       → multiplication (("+" | "-") multiplication)*
-    multiplication → unary (("*" | "/" | "%") unary)*
-    unary          → ("-" | "+") unary | primary
-    primary        → NUMBER | STRING | IDENTIFIER | "(" expression ")"
+    program         → statement*
+    statement       → sayStatement | assignStatement | ifStatement | blockStatement
+    blockStatement  → "{" statement* "}"
+    ifStatement     → "if" "(" expression ")" statement ("else" statement)?
+    sayStatement    → "say" expression
+    assignStatement  → "kas" IDENTIFIER "=" expression
+    expression      → comparison
+    comparison      → addition (("==" | "!=" | "<" | ">" | "<=" | ">=") addition)*
+    addition        → multiplication (("+" | "-") multiplication)*
+    multiplication  → unary (("*" | "/" | "%") unary)*
+    unary           → ("-" | "+") unary | primary
+    primary         → NUMBER | STRING | BOOLEAN | IDENTIFIER | "(" expression ")"
     """
     
     def __init__(self, tokens: List[Token]):
@@ -211,30 +240,61 @@ class Parser:
                 self.advance()
                 continue
             
-            try:
-                stmt = self.parse_statement()
-                if stmt:  # Проверяем что утверждение не None
-                    statements.append(stmt)
-            except ParseError as e:
-                # Восстановление после ошибки - пропускаем до следующей строки
-                print(f"❌ {e}")
-                while not self.match(TokenType.NEWLINE, TokenType.EOF):
-                    self.advance()
+            stmt = self.parse_statement()
+            if stmt:  # Проверяем что утверждение не None
+                statements.append(stmt)
         
         return Program(statements)
     
     def parse_statement(self) -> Optional[Statement]:
         """Парсит одно утверждение"""
-        if self.match(TokenType.SAY):
+        if self.match(TokenType.IF):
+            return self.parse_if_statement()
+        elif self.match(TokenType.SAY):
             return self.parse_say_statement()
         elif self.match(TokenType.KAS):
             return self.parse_assignment_statement()
+        elif self.match(TokenType.LBRACE):
+            return self.parse_block_statement()
         else:
             raise ParseError(
                 f"Unexpected token: '{self.current_token().value}'", 
                 self.current_token()
             )
     
+    def parse_if_statement(self) -> IfStatement:
+        """Парсит if-else утверждение"""
+        self.consume(TokenType.IF)
+        self.consume(TokenType.LPAREN, "Expected '(' after 'if'")
+        condition = self.parse_expression()
+        self.consume(TokenType.RPAREN, "Expected ')' after if condition")
+        
+        then_branch = self.parse_statement()
+        if not isinstance(then_branch, BlockStatement):
+             raise ParseError("Expected a block statement '{...}' after if condition", self.current_token())
+
+        else_branch = None
+        if self.match(TokenType.ELSE):
+            self.advance() # consume 'else'
+            else_branch = self.parse_statement()
+            if not isinstance(else_branch, (BlockStatement, IfStatement)):
+                raise ParseError("Expected a block statement '{...}' or another 'if' after 'else'", self.current_token())
+
+        return IfStatement(condition, then_branch, else_branch)
+
+    def parse_block_statement(self) -> BlockStatement:
+        """Парсит блок кода: { ... }"""
+        self.consume(TokenType.LBRACE)
+        self.skip_newlines()  # Разрешаем новые строки после '{'
+        
+        statements = []
+        while not self.match(TokenType.RBRACE, TokenType.EOF):
+            statements.append(self.parse_statement())
+            self.skip_newlines()  # Разрешаем новые строки после каждого утверждения
+            
+        self.consume(TokenType.RBRACE, "Expected '}' to close block")
+        return BlockStatement(statements)
+
     def parse_say_statement(self) -> SayStatement:
         """Парсит say утверждение"""
         self.consume(TokenType.SAY)  # Потребляем 'say'
@@ -262,7 +322,18 @@ class Parser:
     
     def parse_expression(self) -> Expression:
         """Парсит выражение (точка входа в иерархию приоритетов)"""
-        return self.parse_addition()
+        return self.parse_comparison()
+
+    def parse_comparison(self) -> Expression:
+        """Парсит операторы сравнения"""
+        left = self.parse_addition()
+        
+        while self.match(TokenType.EQ, TokenType.NEQ, TokenType.LT, TokenType.GT, TokenType.LTE, TokenType.GTE):
+            operator = self.advance().value
+            right = self.parse_addition()
+            left = BinaryOperation(left, operator, right)
+            
+        return left
     
     def parse_addition(self) -> Expression:
         """Парсит сложение и вычитание (низший приоритет)"""
@@ -315,6 +386,15 @@ class Parser:
             # Обрабатываем строковый литерал (убираем кавычки и escape)
             string_value = self._process_string_literal(token.value)
             return StringLiteral(string_value)
+
+        # Булевы значения
+        elif self.match(TokenType.TRUE):
+            self.advance()
+            return BooleanLiteral(True)
+        
+        elif self.match(TokenType.FALSE):
+            self.advance()
+            return BooleanLiteral(False)
         
         # Идентификаторы (переменные)
         elif self.match(TokenType.IDENTIFIER):
