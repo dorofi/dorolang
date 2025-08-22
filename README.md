@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.svg" alt="DoroLang Logo" width="160"/>
+  <img src="doroff_logo.svg" alt="DoroLang Logo" width="160"/>
 </p>
 
 # DoroLang 🚀
