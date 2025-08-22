@@ -179,7 +179,7 @@ class Interpreter:
         
         Args:
             left: Левый операнд
-            operator: Оператор (+, -, *, /, %)
+            operator: Оператор (+, -, *, /, %, ==, !=, <, >, <=, >=, and, or)
             right: Правый операнд
             
         Returns:
@@ -189,8 +189,14 @@ class Interpreter:
             RuntimeError: При несовместимых типах или других ошибках
         """
         
+        # Логические операторы (новые)
+        if operator == 'and':
+            return self._is_truthy(left) and self._is_truthy(right)
+        elif operator == 'or':
+            return self._is_truthy(left) or self._is_truthy(right)
+        
         # Сложение
-        if operator == '+':
+        elif operator == '+':
             # Числа + числа
             if isinstance(left, (int, float)) and isinstance(right, (int, float)):
                 return left + right
@@ -203,6 +209,12 @@ class Interpreter:
             # Число + строка
             elif isinstance(left, (int, float)) and isinstance(right, str):
                 return str(left) + right
+            # Строка + булево
+            elif isinstance(left, str) and isinstance(right, bool):
+                return left + str(right).lower()
+            # Булево + строка
+            elif isinstance(left, bool) and isinstance(right, str):
+                return str(left).lower() + right
             else:
                 raise RuntimeError(
                     f"Cannot add {type(left).__name__} and {type(right).__name__}"
@@ -265,7 +277,7 @@ class Interpreter:
         Применяет унарную операцию
         
         Args:
-            operator: Унарный оператор (+ или -)
+            operator: Унарный оператор (+, -, not)
             operand: Операнд
             
         Returns:
@@ -286,16 +298,32 @@ class Interpreter:
                     f"Cannot apply unary plus to {type(operand).__name__}"
                 )
             return operand
+        elif operator == 'not':
+            # Логический NOT - работает с любым типом
+            return not self._is_truthy(operand)
         else:
             raise RuntimeError(f"Unknown unary operator: '{operator}'")
     
     def _is_truthy(self, value: Any) -> bool:
-        """Проверяет значение на 'истинность'"""
+        """
+        Проверяет значение на 'истинность'
+        
+        Правила истинности в DoroLang:
+        - false -> False
+        - true -> True  
+        - 0 (число) -> False
+        - любое другое число -> True
+        - "" (пустая строка) -> False
+        - любая другая строка -> True
+        - None -> False
+        """
         if value is None:
             return False
         if isinstance(value, bool):
             return value
         if isinstance(value, (int, float)) and value == 0:
+            return False
+        if isinstance(value, str) and value == "":
             return False
         return True
 
@@ -318,30 +346,64 @@ if __name__ == "__main__":
     from lexer import Lexer
     from parser import Parser
     
-    # Тестовый код
+    # Тестовый код с новыми возможностями
     test_code = '''
-say "Interpreter test!"
+say "Enhanced Interpreter test!"
+
+# Тест булевых значений
+kas is_true = true
+kas is_false = false
+say "is_true = " + is_true
+say "is_false = " + is_false
+
+# Тест логических операторов
 kas x = 10
 kas y = 5
-say "x = " + x
-say "y = " + y
-say "x + y = " + (x + y)
-say "x - y = " + (x - y)
-say "x * y = " + (x * y)
-say "x / y = " + (x / y)
-say "x % y = " + (x % y)
+kas result_and = x > 5 and y < 10
+kas result_or = x < 5 or y < 10
+kas result_not = not is_false
 
-kas negative = -x
-say "negative = " + negative
+say "x > 5 and y < 10 = " + result_and
+say "x < 5 or y < 10 = " + result_or  
+say "not false = " + result_not
 
-kas complex = (x + y) * 2 - negative
-say "complex = " + complex
+# Тест if-else с логическими выражениями
+if (x > y and is_true) {
+    say "Complex condition is true!"
+    kas status = "success"
+} else {
+    say "Complex condition is false"
+    kas status = "failed"
+}
 
-kas name = "DoroLang"
-say "Language: " + name
+# Тест вложенных условий
+if (x > 15) {
+    say "x is very big"
+} else {
+    if (x > 8) {
+        say "x is big enough"
+    } else {
+        say "x is too small"
+    }
+}
+
+# Тест сложных логических выражений
+kas complex_result = (x + y) > 10 and not is_false or y == 5
+say "Complex logical result: " + complex_result
+
+# Тест истинности различных типов
+kas empty_string = ""
+kas non_empty_string = "hello"
+kas zero = 0
+kas non_zero = 42
+
+say "Empty string is truthy: " + (not not empty_string)
+say "Non-empty string is truthy: " + (not not non_empty_string)
+say "Zero is truthy: " + (not not zero)
+say "Non-zero is truthy: " + (not not non_zero)
 '''
     
-    print("=== TESTING INTERPRETER ===")
+    print("=== TESTING ENHANCED INTERPRETER ===")
     print("Source code:")
     print(test_code)
     print("\n" + "="*40)
@@ -368,7 +430,7 @@ say "Language: " + name
         print(f"\n=== OUTPUT SUMMARY ===")
         print(f"Total output lines: {len(output)}")
         
-        print("\n✅ Interpreter test passed!")
+        print("\n✅ Enhanced Interpreter test passed!")
         
     except Exception as e:
         print(f"❌ Error: {e}")

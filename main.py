@@ -34,7 +34,7 @@ class DoroLang:
         self.lexer: Optional[Lexer] = None
         self.parser: Optional[Parser] = None
         self.interpreter = Interpreter()
-        self.version = "1.0.0"
+        self.version = "1.1.0"
     
     def run(self, source_code: str, show_details: bool = False) -> List[str]:
         """
@@ -158,9 +158,13 @@ class DoroLang:
                     print("DoroLang syntax:")
                     print("  say \"text\"        - print text")
                     print("  kas var = value    - assign variable")
+                    print("  if (condition) { } - conditional")
+                    print("  true, false        - boolean values")
+                    print("  and, or, not       - logical operators")
                     print("  Operators: +, -, *, /, %")
+                    print("  Comparison: ==, !=, <, >, <=, >=")
                     print("  Parentheses: (expression)")
-                    print("  Unary: -x, +x")
+                    print("  Unary: -x, +x, not x")
                     continue
                     
                 elif not line:
@@ -209,7 +213,7 @@ say "Created by Dorofii Karnaukh"
         
         ("Variables and Arithmetic", '''
 kas name = "DoroLang"
-kas version = 1.0
+kas version = 1.1
 say "Language: " + name
 say "Version: " + version
 
@@ -223,27 +227,75 @@ say "a / b = " + (a / b)
 say "a % b = " + (a % b)
         '''),
         
-        ("Unary Operations", '''
-kas positive = 42
-kas negative = -positive
-kas double_negative = -negative
+        ("Boolean Values and Logic", '''
+kas is_sunny = true
+kas is_weekend = false
+kas temperature = 25
 
-say "positive = " + positive
-say "negative = " + negative
-say "double negative = " + double_negative
-say "unary plus = " + (+positive)
+say "Is sunny: " + is_sunny
+say "Is weekend: " + is_weekend
+say "Temperature: " + temperature
+
+# Логические операции
+kas good_weather = is_sunny and temperature > 20
+kas can_relax = is_weekend or good_weather
+kas stay_inside = not (good_weather and is_weekend)
+
+say "Good weather: " + good_weather
+say "Can relax: " + can_relax
+say "Stay inside: " + stay_inside
         '''),
         
-        ("Complex Expressions", '''
-kas x = 5
-kas y = 3
-kas z = 2
+        ("Conditional Statements", '''
+kas age = 25
+kas has_license = true
 
-say "Simple: " + (x + y)
-say "With precedence: " + (x + y * z)
-say "With parentheses: " + ((x + y) * z)
-say "Complex: " + (-(x + y) * z % (x - y))
-say "Very complex: " + (-((x + y) * z) + (x % y))
+say "Age: " + age
+say "Has license: " + has_license
+
+if (age >= 18 and has_license) {
+    say "Can drive a car!"
+    kas status = "eligible"
+} else {
+    say "Cannot drive yet"
+    kas status = "not eligible"  
+}
+
+# Вложенные условия
+if (age >= 65) {
+    say "Senior citizen discount available"
+} else {
+    if (age >= 18) {
+        say "Regular adult pricing"
+    } else {
+        say "Child discount available"
+    }
+}
+        '''),
+        
+        ("Complex Logic", '''
+kas score = 85
+kas attendance = 90
+kas has_extra_credit = true
+
+say "Score: " + score
+say "Attendance: " + attendance + "%"
+say "Extra credit: " + has_extra_credit
+
+# Сложное условие для оценки
+kas excellent = score >= 90 and attendance >= 85
+kas good = (score >= 80 and attendance >= 80) or has_extra_credit
+kas needs_improvement = not (good or excellent)
+
+if (excellent) {
+    say "Grade: A - Excellent work!"
+} else {
+    if (good) {
+        say "Grade: B - Good job!"
+    } else {
+        say "Grade: C - Needs improvement"
+    }
+}
         '''),
         
         ("String Operations", '''
@@ -256,20 +308,75 @@ say "Last name: " + last_name
 say "Full name: " + full_name
 
 kas age = 25
-say full_name + " is " + age + " years old"
+kas is_student = true
+kas message = full_name + " is " + age + " years old"
+
+if (is_student) {
+    kas student_info = message + " and is a student"
+    say student_info
+} else {
+    say message + " and is not a student"
+}
         '''),
         
-        ("Mixed Types", '''
-kas pi = 3.14159
-kas radius = 5
-kas area = pi * radius * radius
+        ("Advanced Expressions", '''
+kas x = 5
+kas y = 3
+kas z = 2
+kas flag = true
 
-say "Pi = " + pi
-say "Radius = " + radius
-say "Area = " + area
+say "Variables: x=" + x + ", y=" + y + ", z=" + z + ", flag=" + flag
 
-kas message = "The area of circle with radius " + radius + " is " + area
-say message
+# Сложные арифметические выражения
+kas result1 = -(x + y) * z % (x - y)
+kas result2 = -((x + y) * z) + (x % y)
+
+say "-(x + y) * z % (x - y) = " + result1
+say "-((x + y) * z) + (x % y) = " + result2
+
+# Сложные логические выражения  
+kas complex_logic = (x > y or flag) and not (z == 0) or (x + y) >= 8
+say "Complex logic result: " + complex_logic
+
+# Комбинированные условия
+if ((x + y + z) > 9 and flag) or (x * y) > 10) {
+    say "Complex condition met!"
+    kas final_result = "success"
+} else {
+    say "Complex condition not met"
+    kas final_result = "failure"
+}
+
+say "Final result: " + final_result
+        '''),
+        
+        ("Type Coercion Demo", '''
+kas number = 42
+kas text = "The answer is: "
+kas is_correct = true
+kas zero = 0
+kas empty = ""
+
+say "Demonstrating type coercion:"
+say text + number
+say "Is correct: " + is_correct
+say "Number + boolean: " + (number + is_correct)
+
+# Демонстрация истинности
+say "Truthiness demo:"
+say "42 is truthy: " + (not not number)
+say "0 is truthy: " + (not not zero) 
+say "true is truthy: " + (not not is_correct)
+say "Empty string is truthy: " + (not not empty)
+say "Non-empty string is truthy: " + (not not text)
+
+if (number and text and is_correct) {
+    say "All values are truthy!"
+}
+
+if (not zero and not empty) {
+    say "Zero and empty string are falsy!"
+}
         ''')
     ]
     
@@ -293,7 +400,7 @@ say message
 
 def show_usage() -> None:
     """Показывает справку по использованию"""
-    print(f"DoroLang Programming Language Interpreter")
+    print(f"DoroLang Programming Language Interpreter v1.1.0")
     print("Created by Dorofii Karnaukh")
     print()
     print("Usage:")
@@ -307,16 +414,21 @@ def show_usage() -> None:
     print("  ✅ Variables (kas x = value)")
     print("  ✅ Print statements (say expression)")
     print("  ✅ Arithmetic (+, -, *, /, %)")
-    print("  ✅ Unary operations (-x, +x)")
+    print("  ✅ Comparison (==, !=, <, >, <=, >=)")
+    print("  ✅ Logical operators (and, or, not)")
+    print("  ✅ Boolean values (true, false)")
+    print("  ✅ Conditional statements (if/else)")
+    print("  ✅ Block statements ({ ... })")
+    print("  ✅ Unary operations (-x, +x, not x)")
     print("  ✅ Parentheses for precedence")
     print("  ✅ String concatenation")
-    print("  ✅ Mixed type operations")
+    print("  ✅ Type coercion")
     print("  ✅ Comments (# comment)")
 
 
 def run_tests() -> None:
-    """Запускает тесты DoroLang"""
-    print("🧪 Running DoroLang tests...")
+    """Запускает расширенные тесты DoroLang"""
+    print("🧪 Running Enhanced DoroLang tests...")
     print("=" * 50)
     
     dorolang = DoroLang()
@@ -329,6 +441,29 @@ def run_tests() -> None:
         ("String concat", 'say "Hello, " + "World!"'),
         ("Mixed types", 'say "Result: " + (2 + 3)'),
         ("Complex expression", 'kas x = -(2 + 3) * 4 % 7\nsay x'),
+        
+        # Новые тесты для логики
+        ("Boolean literals", 'kas a = true\nkas b = false\nsay a\nsay b'),
+        ("Logical AND", 'kas result = true and false\nsay result'),
+        ("Logical OR", 'kas result = true or false\nsay result'),
+        ("Logical NOT", 'kas result = not true\nsay result'),
+        ("Complex logic", 'kas x = 5 > 3 and 2 < 4\nsay x'),
+        
+        # Тесты условий
+        ("Simple if-true", 'if (true) {\nsay "true branch"\n}'),
+        ("Simple if-false", 'if (false) {\nsay "true branch"\n} else {\nsay "false branch"\n}'),
+        ("Comparison in if", 'kas x = 10\nif (x > 5) {\nsay "x is big"\n}'),
+        ("Complex condition", 'kas x = 5\nkas y = 3\nif (x > y and x < 10) {\nsay "condition met"\n}'),
+        
+        # Тесты истинности
+        ("Zero truthiness", 'if (not 0) {\nsay "zero is falsy"\n}'),
+        ("String truthiness", 'if ("hello") {\nsay "string is truthy"\n}'),
+        ("Empty string", 'if (not "") {\nsay "empty string is falsy"\n}'),
+        
+        # Тесты типов
+        ("Boolean to string", 'say "Value: " + true'),
+        ("Number comparison", 'say 10 > 5'),
+        ("String equality", 'say "hello" == "hello"'),
     ]
     
     passed = 0
@@ -365,7 +500,8 @@ def main() -> None:
     
     if len(sys.argv) == 1:
         # Без аргументов - показываем примеры
-        print("🎉 DoroLang Programming Language")
+        print("🎉 DoroLang Programming Language v1.1.0")
+        print("   Enhanced with Boolean Logic & Conditionals!")
         run_examples()
         print("\n" + "=" * 70)
         show_usage()

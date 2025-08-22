@@ -1,8 +1,18 @@
 #переменные начинаются с kas
 #вывод данных в консоль say
 
-say "DoroLang is working!"
-kas my_variable = "Hello, DoroLang!"
-say my_variable
-kas number = 42
-say "The number is: " + number
+kas age = 20
+
+if (age >= 18) {
+	say "доступ разрешеню."
+}else {
+	say "доступ запрешен"
+}
+
+kas name = "dorofii"
+
+if (name == "dorofii") {
+	say "ты дорофей"
+}else {
+	say "ты не дорофей!"
+}

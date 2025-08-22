@@ -70,7 +70,7 @@ class Identifier(Expression):
 
 @dataclass
 class BinaryOperation(Expression):
-    """Бинарные операции: a + b, x * y"""
+    """Бинарные операции: a + b, x * y, a and b"""
     left: Expression
     operator: str
     right: Expression
@@ -81,7 +81,7 @@ class BinaryOperation(Expression):
 
 @dataclass
 class UnaryOperation(Expression):
-    """Унарные операции: -x, +y"""
+    """Унарные операции: -x, +y, not condition"""
     operator: str
     operand: Expression
     
@@ -125,7 +125,7 @@ class BlockStatement(Statement):
     statements: List[Statement]
     
     def __str__(self):
-        return f"Block(...)"
+        return f"Block({len(self.statements)} statements)"
 
 
 @dataclass
@@ -133,7 +133,11 @@ class IfStatement(Statement):
     """If-Else утверждение"""
     condition: Expression
     then_branch: BlockStatement
-    else_branch: Optional[Statement] # Может быть IfStatement или BlockStatement
+    else_branch: Optional[Statement]  # Может быть IfStatement или BlockStatement
+    
+    def __str__(self):
+        else_info = " with else" if self.else_branch else ""
+        return f"If({self.condition}){else_info}"
 
 
 @dataclass
@@ -161,19 +165,22 @@ class Parser:
     Синтаксический анализатор для DoroLang
     
     Использует рекурсивный спуск для построения AST
-    Грамматика (приоритет операторов):
+    Обновленная грамматика (приоритет операторов):
     
     program         → statement*
     statement       → sayStatement | assignStatement | ifStatement | blockStatement
     blockStatement  → "{" statement* "}"
     ifStatement     → "if" "(" expression ")" statement ("else" statement)?
     sayStatement    → "say" expression
-    assignStatement  → "kas" IDENTIFIER "=" expression
-    expression      → comparison
-    comparison      → addition (("==" | "!=" | "<" | ">" | "<=" | ">=") addition)*
+    assignStatement → "kas" IDENTIFIER "=" expression
+    expression      → logicalOr
+    logicalOr       → logicalAnd ("or" logicalAnd)*
+    logicalAnd      → equality ("and" equality)*
+    equality        → comparison (("==" | "!=") comparison)*
+    comparison      → addition (("<" | ">" | "<=" | ">=") addition)*
     addition        → multiplication (("+" | "-") multiplication)*
     multiplication  → unary (("*" | "/" | "%") unary)*
-    unary           → ("-" | "+") unary | primary
+    unary           → ("-" | "+" | "not") unary | primary
     primary         → NUMBER | STRING | BOOLEAN | IDENTIFIER | "(" expression ")"
     """
     
@@ -322,13 +329,46 @@ class Parser:
     
     def parse_expression(self) -> Expression:
         """Парсит выражение (точка входа в иерархию приоритетов)"""
-        return self.parse_comparison()
+        return self.parse_logical_or()
+    
+    def parse_logical_or(self) -> Expression:
+        """Парсит логический OR (самый низкий приоритет)"""
+        left = self.parse_logical_and()
+        
+        while self.match(TokenType.OR):
+            operator = self.advance().value
+            right = self.parse_logical_and()
+            left = BinaryOperation(left, operator, right)
+        
+        return left
+    
+    def parse_logical_and(self) -> Expression:
+        """Парсит логический AND"""
+        left = self.parse_equality()
+        
+        while self.match(TokenType.AND):
+            operator = self.advance().value
+            right = self.parse_equality()
+            left = BinaryOperation(left, operator, right)
+        
+        return left
+
+    def parse_equality(self) -> Expression:
+        """Парсит операторы равенства"""
+        left = self.parse_comparison()
+        
+        while self.match(TokenType.EQ, TokenType.NEQ):
+            operator = self.advance().value
+            right = self.parse_comparison()
+            left = BinaryOperation(left, operator, right)
+            
+        return left
 
     def parse_comparison(self) -> Expression:
         """Парсит операторы сравнения"""
         left = self.parse_addition()
         
-        while self.match(TokenType.EQ, TokenType.NEQ, TokenType.LT, TokenType.GT, TokenType.LTE, TokenType.GTE):
+        while self.match(TokenType.LT, TokenType.GT, TokenType.LTE, TokenType.GTE):
             operator = self.advance().value
             right = self.parse_addition()
             left = BinaryOperation(left, operator, right)
@@ -336,7 +376,7 @@ class Parser:
         return left
     
     def parse_addition(self) -> Expression:
-        """Парсит сложение и вычитание (низший приоритет)"""
+        """Парсит сложение и вычитание"""
         left = self.parse_multiplication()
         
         while self.match(TokenType.PLUS, TokenType.MINUS):
@@ -347,7 +387,7 @@ class Parser:
         return left
     
     def parse_multiplication(self) -> Expression:
-        """Парсит умножение, деление и модulo (средний приоритет)"""
+        """Парсит умножение, деление и модulo"""
         left = self.parse_unary()
         
         while self.match(TokenType.MULTIPLY, TokenType.DIVIDE, TokenType.MODULO):
@@ -358,10 +398,10 @@ class Parser:
         return left
     
     def parse_unary(self) -> Expression:
-        """Парсит унарные операции (высший приоритет)"""
-        if self.match(TokenType.MINUS, TokenType.PLUS):
+        """Парсит унарные операции (включая логический NOT)"""
+        if self.match(TokenType.MINUS, TokenType.PLUS, TokenType.NOT):
             operator = self.advance().value
-            operand = self.parse_unary()  # Рекурсивный вызов для поддержки --x
+            operand = self.parse_unary()  # Рекурсивный вызов для поддержки --x и not not x
             return UnaryOperation(operator, operand)
         
         return self.parse_primary()
@@ -439,6 +479,21 @@ class Parser:
             print(f"{prefix}Assignment: {node.identifier} =")
             self.pretty_print_ast(node.expression, indent + 1)
         
+        elif isinstance(node, IfStatement):
+            print(f"{prefix}IfStatement:")
+            print(f"{prefix}  Condition:")
+            self.pretty_print_ast(node.condition, indent + 2)
+            print(f"{prefix}  Then:")
+            self.pretty_print_ast(node.then_branch, indent + 2)
+            if node.else_branch:
+                print(f"{prefix}  Else:")
+                self.pretty_print_ast(node.else_branch, indent + 2)
+        
+        elif isinstance(node, BlockStatement):
+            print(f"{prefix}Block:")
+            for stmt in node.statements:
+                self.pretty_print_ast(stmt, indent + 1)
+        
         elif isinstance(node, BinaryOperation):
             print(f"{prefix}BinaryOp: '{node.operator}'")
             print(f"{prefix}  Left:")
@@ -460,6 +515,9 @@ class Parser:
         elif isinstance(node, StringLiteral):
             print(f"{prefix}String: \"{node.value}\"")
         
+        elif isinstance(node, BooleanLiteral):
+            print(f"{prefix}Boolean: {node.value}")
+        
         elif isinstance(node, Identifier):
             print(f"{prefix}Variable: {node.name}")
 
@@ -468,16 +526,44 @@ class Parser:
 if __name__ == "__main__":
     from lexer import Lexer
     
-    # Тестовый код
+    # Тестовый код с новыми возможностями
     test_code = '''
-say "Parser test!"
-kas x = -(5 + 3) * 2
-kas y = (10 + 5) % 4
-kas z = -(-x + y)
-say "Result: " + z
+say "Enhanced Parser test!"
+kas x = 5
+kas y = 3
+kas z = true
+
+# Тест логических операторов
+kas result1 = x > y and z
+kas result2 = x < y or not z
+kas complex = (x + y) > 5 and (not z or y == 3)
+
+say "result1 = " + result1
+say "result2 = " + result2
+say "complex = " + complex
+
+# Тест if-else с логическими выражениями
+if (x > y and z) {
+    say "Both conditions are true!"
+    kas message = "Success!"
+} else {
+    say "Conditions not met"
+    kas message = "Failed"
+}
+
+# Вложенные if-else
+if (x > 10) {
+    say "x is big"
+} else {
+    if (x > 3) {
+        say "x is medium"  
+    } else {
+        say "x is small"
+    }
+}
 '''
     
-    print("=== TESTING PARSER ===")
+    print("=== TESTING ENHANCED PARSER ===")
     print("Source code:")
     print(test_code)
     print("\n" + "="*40)
@@ -496,7 +582,9 @@ say "Result: " + z
         print("\n=== AST ===")
         parser.pretty_print_ast(ast)
         
-        print("\n✅ Parser test passed!")
+        print("\n✅ Enhanced Parser test passed!")
         
     except Exception as e:
         print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()

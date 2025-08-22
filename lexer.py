@@ -26,6 +26,11 @@ class TokenType(Enum):
     TRUE = auto()       # true
     FALSE = auto()      # false
     
+    # Логические операторы (НОВЫЕ)
+    AND = auto()        # and
+    OR = auto()         # or
+    NOT = auto()        # not
+    
     # Операторы
     ASSIGN = auto()     # =
     PLUS = auto()       # +
@@ -98,6 +103,9 @@ class Lexer:
             (r'else\b', TokenType.ELSE),
             (r'true\b', TokenType.TRUE),
             (r'false\b', TokenType.FALSE),
+            (r'and\b', TokenType.AND),      # НОВЫЙ
+            (r'or\b', TokenType.OR),        # НОВЫЙ
+            (r'not\b', TokenType.NOT),      # НОВЫЙ
             
             # Литералы
             (r'\d+\.?\d*', TokenType.NUMBER),
@@ -165,36 +173,6 @@ class Lexer:
             while (self.current_char() is not None and 
                    self.current_char() != '\n'):
                 self.advance()
-    
-    def read_string(self, quote_char: str) -> str:
-        """Читаем строку с правильной обработкой escape-последовательностей"""
-        result = quote_char  # Включаем открывающую кавычку
-        self.advance()  # Пропускаем открывающую кавычку
-        
-        while (self.current_char() is not None and 
-               self.current_char() != quote_char):
-            if self.current_char() == '\\':
-                # Обработка escape-последовательностей
-                result += self.current_char()
-                self.advance()
-                if self.current_char() is not None:
-                    result += self.current_char()
-                    self.advance()
-            else:
-                result += self.current_char()
-                self.advance()
-        
-        if self.current_char() == quote_char:
-            result += self.current_char()  # Включаем закрывающую кавычку
-            self.advance()
-        else:
-            raise LexerError(
-                f"Unterminated string starting with {quote_char}",
-                self.line, self.column
-            )
-        
-        return result
-    
     def tokenize(self) -> List[Token]:
         """
         Основной метод токенизации
@@ -222,17 +200,6 @@ class Lexer:
             # Сохраняем текущую позицию для токена
             token_line = self.line
             token_column = self.column
-            
-            # Строки в кавычках
-            if self.current_char() in '"\'':
-                quote_char = self.current_char()
-                try:
-                    string_value = self.read_string(quote_char)
-                    self.tokens.append(Token(TokenType.STRING, string_value, token_line, token_column))
-                    continue
-                except LexerError:
-                    raise  # Перебрасываем ошибку дальше
-            
             # Пробуем найти совпадение с регулярными выражениями
             found_match = False
             remaining_source = self.source[self.position:]
@@ -271,38 +238,63 @@ class Lexer:
 
 # Тестирование модуля
 if __name__ == "__main__":
-    # Тестовый код
+    # Тестовый код с новыми возможностями
     test_code = '''
-# Комментарий
+# Комментарий - тест логических операторов
 say "Hello, DoroLang!"
 kas x = 42
 kas y = (x + 10) % 3
-say "Result: " + y
+
+# Тест булевых значений и логических операторов
+kas is_big = x > 30
+kas is_small = y < 5
+kas result = is_big and is_small
+
+if (result) {
+    say "Both conditions are true!"
+} else {
+    say "At least one condition is false"
+}
+
+# Тест оператора not
+kas negative_result = not result
+say "Negative result: " + negative_result
+
+# Тест оператора or
+if (is_big or is_small) {
+    say "At least one is true"
+}
 '''
+
+    # Более детальный тест для строк, чтобы убедиться, что ничего не сломалось
+    string_test_code = '''
+say "простая строка"
+say 'и в одинарных кавычках'
+say "строка с \\"экранированной кавычкой\\""
+say 'и в одинарных \\'тоже\\''
+say "пустая строка: """
+kas my_string="строкабезпробела"
+'''
+
+    def run_lexer_test(name, code):
+        """Вспомогательная функция для запуска тестов и вывода результата"""
+        print(f"\n===== ЗАПУСК ТЕСТА: {name} =====")
+        print("Исходный код:")
+        print(code)
+        print("-" * 20)
+        try:
+            lexer = Lexer(code)
+            tokens = lexer.tokenize()
+            lexer.print_tokens()
+            print(f"\n✅ Тест '{name}' пройден! Найдено {len(tokens)} токенов.")
+        except LexerError as e:
+            print(f"❌ Ошибка лексера в тесте '{name}': {e}")
+        except Exception as e:
+            print(f"❌ Неожиданная ошибка: {e}")
+
     
-    print("=== TESTING LEXER ===")
-    print("Source code:")
-    print(test_code)
-    print("\n" + "="*40)
-    
-    try:
-        lexer = Lexer(test_code)
-        tokens = lexer.tokenize()
-        lexer.print_tokens()
-        
-        print(f"\n✅ Lexer test passed! Found {len(tokens)} tokens.")
-        
-        # Проверяем что нашли все ожидаемые токены
-        token_types = [token.type for token in tokens]
-        expected = [TokenType.SAY, TokenType.KAS, TokenType.LPAREN, TokenType.MODULO]
-        
-        for expected_type in expected:
-            if expected_type in token_types:
-                print(f"✅ Found {expected_type.name}")
-            else:
-                print(f"❌ Missing {expected_type.name}")
-                
-    except LexerError as e:
-        print(f"❌ Lexer error: {e}")
-    except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+    print("="*20 + " ТЕСТИРОВАНИЕ ЛЕКСЕРА " + "="*20)
+
+    # Запускаем оба теста
+    run_lexer_test("Логические операторы", test_code)
+    run_lexer_test("Парсинг строк", string_test_code)

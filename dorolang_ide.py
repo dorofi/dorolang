@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-DoroLang IDE - Интегрированная среда разработки (Исправленная версия)
-Полнофункциональная IDE для языка DoroLang
+DoroLang IDE - Интегрированная среда разработки (Улучшенная версия)
+Полнофункциональная IDE для языка DoroLang с поддержкой новых возможностей
 
 Автор: Dorofii Karnaukh
 """
@@ -99,7 +99,7 @@ class MockInterpreter:
 
 
 class SyntaxHighlighter:
-    """Подсветка синтаксиса для DoroLang с использованием единого Regex"""
+    """Улучшенная подсветка синтаксиса для DoroLang с поддержкой новых возможностей"""
     
     def __init__(self, text_widget):
         self.text_widget = text_widget
@@ -112,6 +112,10 @@ class SyntaxHighlighter:
         try:
             # Ключевые слова
             self.text_widget.tag_config("keyword", foreground="#0066CC", font=("Consolas", 11, "bold"))
+            # Логические операторы (новый стиль)
+            self.text_widget.tag_config("logical", foreground="#9A4500", font=("Consolas", 11, "bold"))
+            # Булевы значения
+            self.text_widget.tag_config("boolean", foreground="#008B8B", font=("Consolas", 11, "bold"))
             # Строки
             self.text_widget.tag_config("string", foreground="#009900")
             # Числа
@@ -120,23 +124,33 @@ class SyntaxHighlighter:
             self.text_widget.tag_config("comment", foreground="#808080", font=("Consolas", 11, "italic"))
             # Операторы
             self.text_widget.tag_config("operator", foreground="#CC0066")
+            # Разделители
+            self.text_widget.tag_config("delimiter", foreground="#666666")
         except Exception as e:
             print(f"Предупреждение: Ошибка настройки тегов подсветки: {e}")
     
     def compile_regex(self):
-        """Компиляция единого регулярного выражения для токенизации"""
-        keywords = ['say', 'kas', 'if', 'else', 'true', 'false']
+        """Компиляция регулярного выражения с поддержкой новых токенов"""
+        keywords = ['say', 'kas', 'if', 'else']
+        logical_ops = ['and', 'or', 'not']
+        boolean_values = ['true', 'false']
+        
         keyword_pattern = r'\b(' + '|'.join(keywords) + r')\b'
+        logical_pattern = r'\b(' + '|'.join(logical_ops) + r')\b'
+        boolean_pattern = r'\b(' + '|'.join(boolean_values) + r')\b'
 
         # Порядок важен!
         token_patterns = [
             ('COMMENT', r'#.*$'),
             ('STRING', r'(".*?"|\'.*?\')'),
             ('NUMBER', r'\b\d+\.?\d*\b'),
+            ('BOOLEAN', boolean_pattern),
+            ('LOGICAL', logical_pattern),
             ('KEYWORD', keyword_pattern),
-            ('OPERATOR', r'==|!=|<=|>=|[+\-*/%=<>{}]'), # Добавлены скобки
+            ('OPERATOR', r'==|!=|<=|>=|[+\-*/%=<>]'),
+            ('DELIMITER', r'[(){}]'),
             ('IDENTIFIER', r'[a-zA-Z_][a-zA-Z0-9_]*'),
-            ('MISMATCH', r'.') # Любой другой символ для полного покрытия строки
+            ('MISMATCH', r'.')
         ]
 
         # Собираем в одно большое выражение
@@ -146,13 +160,13 @@ class SyntaxHighlighter:
         """Запускает отложенную подсветку синтаксиса"""
         if self.highlight_job:
             self.text_widget.after_cancel(self.highlight_job)
-        self.highlight_job = self.text_widget.after(100, self.apply_highlight) # Задержка в 100 мс
+        self.highlight_job = self.text_widget.after(100, self.apply_highlight)
 
     def apply_highlight(self):
-        """Применяет подсветку синтаксиса ко всему тексту"""
+        """Применяет улучшенную подсветку синтаксиса ко всему тексту"""
         try:
             # Очищаем все теги
-            tags_to_remove = ["keyword", "string", "number", "comment", "operator"]
+            tags_to_remove = ["keyword", "logical", "boolean", "string", "number", "comment", "operator", "delimiter"]
             for tag in tags_to_remove:
                 self.text_widget.tag_remove(tag, "1.0", tk.END)
 
@@ -177,7 +191,7 @@ class SyntaxHighlighter:
 
 
 class CodeEditor:
-    """Редактор кода с подсветкой синтаксиса и номерами строк"""
+    """Улучшенный редактор кода с поддержкой автодополнения"""
     
     def __init__(self, parent):
         self.parent = parent
@@ -213,7 +227,8 @@ class CodeEditor:
                 selectbackground='#316AC5',
                 insertbackground='black',
                 bg='white',
-                fg='black'
+                fg='black',
+                insertwidth=2
             )
             self.text_area.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
             
@@ -225,6 +240,7 @@ class CodeEditor:
             self.text_area.bind('<Button-1>', self.on_click)
             self.text_area.bind('<MouseWheel>', self.on_mousewheel)
             self.text_area.bind('<<Modified>>', self.on_modified)
+            self.text_area.bind('<Control-space>', self.show_autocomplete)
             
             # Синхронизация прокрутки
             self.text_area.config(yscrollcommand=self.sync_scroll)
@@ -236,6 +252,34 @@ class CodeEditor:
             print(f"Ошибка настройки редактора: {e}")
             traceback.print_exc()
             raise
+    
+    def show_autocomplete(self, event=None):
+        """Показывает автодополнение (простая версия)"""
+        try:
+            # Список ключевых слов для автодополнения
+            keywords = ['say', 'kas', 'if', 'else', 'true', 'false', 'and', 'or', 'not']
+            
+            # Получаем текущее слово
+            current_pos = self.text_area.index(tk.INSERT)
+            line_start = current_pos.rsplit('.', 1)[0] + '.0'
+            line_text = self.text_area.get(line_start, current_pos)
+            
+            # Находим последнее слово
+            words = re.findall(r'\w+', line_text)
+            if words:
+                partial = words[-1]
+                matches = [kw for kw in keywords if kw.startswith(partial)]
+                
+                if matches and len(matches) == 1 and matches[0] != partial:
+                    # Автоматически дополняем если есть одно совпадение
+                    completion = matches[0][len(partial):]
+                    self.text_area.insert(tk.INSERT, completion)
+                elif len(matches) > 1:
+                    # Показываем список если несколько вариантов
+                    messagebox.showinfo("Автодополнение", f"Возможные варианты: {', '.join(matches)}")
+            
+        except Exception as e:
+            print(f"Ошибка автодополнения: {e}")
     
     def sync_scroll(self, *args):
         """Синхронизация прокрутки номеров строк и текста"""
@@ -336,7 +380,7 @@ class CodeEditor:
 
 
 class Console:
-    """Консоль для вывода результатов"""
+    """Улучшенная консоль для вывода результатов"""
     
     def __init__(self, parent):
         self.frame = ttk.Frame(parent)
@@ -345,11 +389,18 @@ class Console:
     def setup_console(self):
         """Настройка консоли"""
         try:
-            # Заголовок консоли
-            console_label = ttk.Label(self.frame, text="🖥️ Console Output", font=("Arial", 10, "bold"))
-            console_label.pack(anchor=tk.W, padx=5, pady=(5, 0))
+            # Заголовок консоли с дополнительной информацией
+            header_frame = ttk.Frame(self.frame)
+            header_frame.pack(fill=tk.X, padx=5, pady=(5, 0))
             
-            # Текстовое поле консоли
+            console_label = ttk.Label(header_frame, text="🖥️ Console Output", font=("Arial", 10, "bold"))
+            console_label.pack(side=tk.LEFT)
+            
+            # Кнопка очистки консоли
+            clear_button = ttk.Button(header_frame, text="🧹 Clear", command=self.clear)
+            clear_button.pack(side=tk.RIGHT)
+            
+            # Текстовое поле консоли с улучшенными цветами
             self.console_text = scrolledtext.ScrolledText(
                 self.frame,
                 height=12,
@@ -363,10 +414,13 @@ class Console:
             self.console_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
             
             # Настройка тегов для цветного вывода
-            self.console_text.tag_config("output", foreground="#00ff00")
+            self.console_text.tag_config("output", foreground="#00ff88")
             self.console_text.tag_config("error", foreground="#ff4444")
             self.console_text.tag_config("info", foreground="#4488ff")
             self.console_text.tag_config("warning", foreground="#ffaa00")
+            self.console_text.tag_config("success", foreground="#88ff44")
+            self.console_text.tag_config("boolean", foreground="#ff88ff")
+            self.console_text.tag_config("number", foreground="#88aaff")
             
         except Exception as e:
             print(f"Ошибка настройки консоли: {e}")
@@ -374,9 +428,18 @@ class Console:
             raise
     
     def write(self, text, tag="output"):
-        """Запись текста в консоль"""
+        """Запись текста в консоль с улучшенным форматированием"""
         try:
             self.console_text.config(state=tk.NORMAL)
+            
+            # Автоматическое определение типа вывода
+            if "true" in text.lower() or "false" in text.lower():
+                if tag == "output":  # Только если не указан специальный тег
+                    tag = "boolean"
+            elif re.search(r'\d+', text):
+                if tag == "output" and not any(char.isalpha() for char in text if char not in "0123456789. "):
+                    tag = "number"
+            
             self.console_text.insert(tk.END, text, tag)
             self.console_text.see(tk.END)
             self.console_text.config(state=tk.DISABLED)
@@ -407,20 +470,91 @@ class Console:
     
     def write_success(self, text):
         """Успешное выполнение"""
-        self.write(f"✅ {text}\n", "info")
+        self.write(f"✅ {text}\n", "success")
 
 
-class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
-    """Главный класс IDE для DoroLang"""
+class TemplateManager:
+    """Менеджер шаблонов кода"""
+    
+    @staticmethod
+    def get_templates():
+        """Возвращает словарь доступных шаблонов"""
+        return {
+            "Hello World": '''# Hello World на DoroLang
+say "Hello, DoroLang!"
+say "Добро пожаловать в мир программирования!"''',
+            
+            "Variables": '''# Работа с переменными
+kas name = "Ваше имя"
+kas age = 25
+kas is_student = true
+
+say "Имя: " + name
+say "Возраст: " + age
+say "Студент: " + is_student''',
+            
+            "Conditional Logic": '''# Условная логика
+kas score = 85
+kas passed = score >= 60
+
+if (passed) {
+    say "Поздравляем! Вы прошли тест!"
+    kas grade = "Зачёт"
+} else {
+    say "К сожалению, тест не пройден"
+    kas grade = "Незачёт"
+}
+
+say "Итоговая оценка: " + grade''',
+            
+            "Complex Logic": '''# Сложная логика
+kas temperature = 22
+kas is_sunny = true
+kas is_weekend = false
+
+kas good_weather = temperature > 20 and is_sunny
+kas can_go_out = good_weather and (is_weekend or temperature > 25)
+
+if (can_go_out) {
+    say "Отличная погода для прогулки!"
+} else {
+    if (not good_weather) {
+        say "Погода не очень хорошая"
+    } else {
+        say "Погода хорошая, но сегодня рабочий день"
+    }
+}''',
+            
+            "Calculator": '''# Простой калькулятор
+kas a = 15
+kas b = 7
+
+say "Число A: " + a
+say "Число B: " + b
+say "Сумма: " + (a + b)
+say "Разность: " + (a - b)
+say "Произведение: " + (a * b)
+say "Частное: " + (a / b)
+say "Остаток: " + (a % b)
+
+# Сравнения
+say "A больше B: " + (a > b)
+say "A равно B: " + (a == b)
+say "A не равно B: " + (a != b)'''
+        }
+
+
+class DoroLangIDE(tk.Tk):
+    """Главный класс улучшенной IDE для DoroLang"""
     
     def __init__(self):
         super().__init__()
         try:
-            print("Инициализация DoroLang IDE...")
+            print("Инициализация Enhanced DoroLang IDE...")
 
-            self.title("DoroLang IDE v1.0")
-            self.geometry("1200x800")
-            self.minsize(800, 600)
+            self.title("DoroLang IDE v1.1 - Enhanced Edition")
+            self.geometry("1400x900")
+            self.minsize(900, 700)
             
             # Проверяем доступность модулей DoroLang
             if DOROLANG_MODULES_OK and Interpreter:
@@ -448,17 +582,19 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
             self.protocol("WM_DELETE_WINDOW", self.on_closing)
             self.bind_shortcuts()
             
-            # Создаем новый файл по умолчанию
-            self.new_file()
+            # Создаем новый файл по умолчанию с шаблоном
+            self.new_file_with_template()
             
             # Приветственное сообщение
             if DOROLANG_MODULES_OK:
-                self.console.write_info("DoroLang IDE запущена! Нажмите F5 для запуска кода.")
+                self.console.write_info("Enhanced DoroLang IDE v1.1 запущена!")
+                self.console.write_info("Новые возможности: булевы значения, логические операторы, условия")
+                self.console.write_info("Нажмите F5 для запуска кода, Ctrl+Space для автодополнения")
             else:
                 self.console.write_warning("IDE запущена в демо-режиме.")
                 self.console.write_warning("Для полной функциональности поместите lexer.py, parser.py, interpreter.py в ту же папку.")
             
-            print("✅ DoroLang IDE успешно инициализирована!")
+            print("✅ Enhanced DoroLang IDE успешно инициализирована!")
             
         except Exception as e:
             print(f"❌ Критическая ошибка инициализации: {e}")
@@ -466,7 +602,7 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
             raise
     
     def bind_shortcuts(self):
-        """Привязка горячих клавиш"""
+        """Привязка расширенных горячих клавиш"""
         try:
             self.bind('<Control-n>', lambda e: self.new_file())
             self.bind('<Control-o>', lambda e: self.open_file())
@@ -474,11 +610,13 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
             self.bind('<Control-Shift-S>', lambda e: self.save_as_file())
             self.bind('<F5>', lambda e: self.run_code())
             self.bind('<F9>', lambda e: self.run_selection())
+            self.bind('<Control-t>', lambda e: self.show_template_dialog())
+            self.bind('<Control-slash>', lambda e: self.toggle_comment())
         except Exception as e:
             print(f"Ошибка привязки горячих клавиш: {e}")
     
     def setup_style(self):
-        """Настройка стилей"""
+        """Улучшенная настройка стилей"""
         try:
             style = ttk.Style()
             # Используем доступную тему
@@ -487,11 +625,14 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
                 style.theme_use('clam')
             elif available_themes:
                 style.theme_use(available_themes[0])
+                
+            # Настраиваем цвета
+            style.configure('Toolbar.TFrame', background='#f0f0f0')
         except Exception as e:
             print(f"Ошибка настройки стилей: {e}")
     
     def setup_menu(self):
-        """Создание меню"""
+        """Создание расширенного меню"""
         try:
             menubar = tk.Menu(self)
             self.config(menu=menubar)
@@ -500,6 +641,8 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
             file_menu = tk.Menu(menubar, tearoff=0)
             menubar.add_cascade(label="📁 Файл", menu=file_menu)
             file_menu.add_command(label="Новый файл (Ctrl+N)", command=self.new_file)
+            file_menu.add_command(label="Из шаблона (Ctrl+T)", command=self.show_template_dialog)
+            file_menu.add_separator()
             file_menu.add_command(label="Открыть файл (Ctrl+O)", command=self.open_file)
             file_menu.add_separator()
             file_menu.add_command(label="Сохранить (Ctrl+S)", command=self.save_file)
@@ -510,13 +653,16 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
             # Правка
             edit_menu = tk.Menu(menubar, tearoff=0)
             menubar.add_cascade(label="✏️ Правка", menu=edit_menu)
-            edit_menu.add_command(label="Отменить", command=self.undo)
-            edit_menu.add_command(label="Повторить", command=self.redo)
+            edit_menu.add_command(label="Отменить (Ctrl+Z)", command=self.undo)
+            edit_menu.add_command(label="Повторить (Ctrl+Y)", command=self.redo)
             edit_menu.add_separator()
-            edit_menu.add_command(label="Вырезать", command=self.cut)
-            edit_menu.add_command(label="Копировать", command=self.copy)
-            edit_menu.add_command(label="Вставить", command=self.paste)
-            edit_menu.add_command(label="Выделить все", command=self.select_all)
+            edit_menu.add_command(label="Вырезать (Ctrl+X)", command=self.cut)
+            edit_menu.add_command(label="Копировать (Ctrl+C)", command=self.copy)
+            edit_menu.add_command(label="Вставить (Ctrl+V)", command=self.paste)
+            edit_menu.add_command(label="Выделить все (Ctrl+A)", command=self.select_all)
+            edit_menu.add_separator()
+            edit_menu.add_command(label="Комментировать (Ctrl+/)", command=self.toggle_comment)
+            edit_menu.add_command(label="Автодополнение (Ctrl+Space)", command=self.editor.show_autocomplete)
             
             # Запуск
             run_menu = tk.Menu(menubar, tearoff=0)
@@ -527,22 +673,34 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
             run_menu.add_command(label="Очистить консоль", command=self.clear_console)
             run_menu.add_command(label="Сбросить переменные", command=self.reset_interpreter)
             
+            # Инструменты
+            tools_menu = tk.Menu(menubar, tearoff=0)
+            menubar.add_cascade(label="🔧 Инструменты", menu=tools_menu)
+            tools_menu.add_command(label="Шаблоны кода", command=self.show_template_dialog)
+            tools_menu.add_command(label="Проверить синтаксис", command=self.check_syntax)
+            tools_menu.add_separator()
+            tools_menu.add_command(label="Настройки", command=self.show_settings)
+            
             # Справка
             help_menu = tk.Menu(menubar, tearoff=0)
             menubar.add_cascade(label="❓ Справка", menu=help_menu)
+            help_menu.add_command(label="Синтаксис DoroLang", command=self.show_syntax_help)
+            help_menu.add_command(label="Горячие клавиши", command=self.show_shortcuts)
+            help_menu.add_separator()
             help_menu.add_command(label="О программе", command=self.show_about)
             
         except Exception as e:
             print(f"Ошибка создания меню: {e}")
     
     def setup_toolbar(self):
-        """Создание панели инструментов"""
+        """Создание улучшенной панели инструментов"""
         try:
-            toolbar = ttk.Frame(self)
+            toolbar = ttk.Frame(self, style='Toolbar.TFrame')
             toolbar.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
             
             # Кнопки файлов
             ttk.Button(toolbar, text="📄 Новый", command=self.new_file).pack(side=tk.LEFT, padx=2)
+            ttk.Button(toolbar, text="📋 Шаблон", command=self.show_template_dialog).pack(side=tk.LEFT, padx=2)
             ttk.Button(toolbar, text="📁 Открыть", command=self.open_file).pack(side=tk.LEFT, padx=2)
             ttk.Button(toolbar, text="💾 Сохранить", command=self.save_file).pack(side=tk.LEFT, padx=2)
             
@@ -555,9 +713,20 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
             
             ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=5)
             
+            # Кнопки инструментов
+            ttk.Button(toolbar, text="✔️ Синтаксис", command=self.check_syntax).pack(side=tk.LEFT, padx=2)
+            ttk.Button(toolbar, text="💬 Комментарий", command=self.toggle_comment).pack(side=tk.LEFT, padx=2)
+            
+            ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=5)
+            
             # Информация
             self.line_col_label = ttk.Label(toolbar, text="Строка: 1, Столбец: 1")
             self.line_col_label.pack(side=tk.RIGHT, padx=5)
+            
+            # Индикатор режима
+            mode_text = "Full Mode" if DOROLANG_MODULES_OK else "Demo Mode"
+            self.mode_label = ttk.Label(toolbar, text=f"[{mode_text}]", font=("Arial", 8))
+            self.mode_label.pack(side=tk.RIGHT, padx=10)
             
         except Exception as e:
             print(f"Ошибка создания панели инструментов: {e}")
@@ -598,6 +767,230 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
         except Exception as e:
             print(f"Ошибка создания строки состояния: {e}")
     
+    def new_file_with_template(self):
+        """Создание нового файла с базовым шаблоном"""
+        try:
+            welcome_template = '''# Добро пожаловать в DoroLang v1.1!
+# Новые возможности: булевы значения, логика, условия
+
+say "Привет, DoroLang!"
+
+# Попробуйте новые возможности:
+kas name = "Программист"
+kas is_learning = true
+
+if (is_learning) {
+    say name + " изучает DoroLang!"
+} else {
+    say name + " уже знает DoroLang"
+}
+'''
+            self.editor.set_text(welcome_template)
+            self.editor.current_file = None
+            self.editor.is_modified = False
+            self.update_title()
+        except Exception as e:
+            print(f"Ошибка создания шаблона: {e}")
+    
+    def show_template_dialog(self):
+        """Показывает диалог выбора шаблона"""
+        try:
+            templates = TemplateManager.get_templates()
+            
+            # Создаем диалоговое окно
+            dialog = tk.Toplevel(self)
+            dialog.title("Выбор шаблона кода")
+            dialog.geometry("400x300")
+            dialog.transient(self)
+            dialog.grab_set()
+            
+            # Список шаблонов
+            listbox = tk.Listbox(dialog, font=("Arial", 10))
+            listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            
+            for template_name in templates.keys():
+                listbox.insert(tk.END, template_name)
+            
+            # Кнопки
+            button_frame = ttk.Frame(dialog)
+            button_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+            
+            def apply_template():
+                selection = listbox.curselection()
+                if selection:
+                    template_name = listbox.get(selection[0])
+                    self.editor.set_text(templates[template_name])
+                    self.editor.current_file = None
+                    self.editor.is_modified = True
+                    self.update_title()
+                    dialog.destroy()
+            
+            ttk.Button(button_frame, text="Применить", command=apply_template).pack(side=tk.LEFT)
+            ttk.Button(button_frame, text="Отмена", command=dialog.destroy).pack(side=tk.RIGHT)
+            
+            # Автовыбор первого элемента
+            if templates:
+                listbox.selection_set(0)
+                listbox.bind('<Double-Button-1>', lambda e: apply_template())
+            
+        except Exception as e:
+            print(f"Ошибка диалога шаблонов: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось открыть диалог шаблонов: {e}")
+    
+    def toggle_comment(self):
+        """Переключает комментарий для выделенных строк"""
+        try:
+            # Получаем выделенный текст или текущую строку
+            try:
+                start_idx = self.editor.text_area.index(tk.SEL_FIRST)
+                end_idx = self.editor.text_area.index(tk.SEL_LAST)
+            except tk.TclError:
+                # Если нет выделения, работаем с текущей строкой
+                current_line = self.editor.text_area.index(tk.INSERT).split('.')[0]
+                start_idx = f"{current_line}.0"
+                end_idx = f"{current_line}.end"
+            
+            # Получаем текст
+            text = self.editor.text_area.get(start_idx, end_idx)
+            lines = text.split('\n')
+            
+            # Проверяем, нужно ли добавить или удалить комментарии
+            all_commented = all(line.strip().startswith('#') or line.strip() == '' for line in lines)
+            
+            # Обрабатываем каждую строку
+            new_lines = []
+            for line in lines:
+                if all_commented:
+                    # Удаляем комментарий
+                    if line.strip().startswith('#'):
+                        # Убираем первый # и один пробел после него если есть
+                        new_line = line.replace('#', '', 1)
+                        if new_line.startswith(' '):
+                            new_line = new_line[1:]
+                        new_lines.append(new_line)
+                    else:
+                        new_lines.append(line)
+                else:
+                    # Добавляем комментарий
+                    if line.strip():  # Не комментируем пустые строки
+                        new_lines.append('# ' + line)
+                    else:
+                        new_lines.append(line)
+            
+            # Заменяем текст
+            self.editor.text_area.delete(start_idx, end_idx)
+            self.editor.text_area.insert(start_idx, '\n'.join(new_lines))
+            
+        except Exception as e:
+            print(f"Ошибка переключения комментария: {e}")
+    
+    def check_syntax(self):
+        """Проверяет синтаксис без выполнения"""
+        try:
+            if not DOROLANG_MODULES_OK:
+                self.console.write_warning("Проверка синтаксиса недоступна в демо-режиме")
+                return
+            
+            code = self.editor.get_text().strip()
+            if not code:
+                self.console.write_warning("Нет кода для проверки!")
+                return
+            
+            self.console.write_info("Проверка синтаксиса...")
+            
+            try:
+                # Только лексер и парсер
+                lexer = Lexer(code)
+                tokens = lexer.tokenize()
+                
+                parser = Parser(tokens)
+                ast = parser.parse()
+                
+                self.console.write_success(f"Синтаксис корректен! Найдено {len(ast.statements)} утверждений")
+                
+            except LexerError as e:
+                self.console.write_error(f"Ошибка лексера: {e}")
+            except ParseError as e:
+                self.console.write_error(f"Синтаксическая ошибка: {e}")
+            except Exception as e:
+                self.console.write_error(f"Неожиданная ошибка: {e}")
+                
+        except Exception as e:
+            print(f"Ошибка проверки синтаксиса: {e}")
+            self.console.write_error(f"Ошибка проверки: {e}")
+    
+    def show_syntax_help(self):
+        """Показывает справку по синтаксису DoroLang"""
+        help_text = """DoroLang v1.1 - Справка по синтаксису
+
+ОСНОВНЫЕ КОНСТРУКЦИИ:
+• say "текст"              - вывод текста
+• kas переменная = значение - объявление переменной
+
+ТИПЫ ДАННЫХ:
+• Числа: 42, 3.14
+• Строки: "привет", 'мир'
+• Булевы: true, false
+
+ОПЕРАТОРЫ:
+• Арифметические: +, -, *, /, %
+• Сравнения: ==, !=, <, >, <=, >=
+• Логические: and, or, not
+
+УСЛОВНЫЕ КОНСТРУКЦИИ:
+if (условие) {
+    # код если истина
+} else {
+    # код если ложь
+}
+
+КОММЕНТАРИИ:
+# Это комментарий
+
+ПРИМЕРЫ:
+kas age = 25
+if (age >= 18) {
+    say "Совершеннолетний"
+} else {
+    say "Несовершеннолетний"
+}
+
+kas result = (age > 20) and (age < 30)
+say "Возраст от 20 до 30: " + result
+"""
+        messagebox.showinfo("Синтаксис DoroLang", help_text)
+    
+    def show_shortcuts(self):
+        """Показывает горячие клавиши"""
+        shortcuts_text = """Горячие клавиши DoroLang IDE
+
+ФАЙЛЫ:
+Ctrl+N        - Новый файл
+Ctrl+T        - Новый из шаблона
+Ctrl+O        - Открыть файл
+Ctrl+S        - Сохранить
+Ctrl+Shift+S  - Сохранить как
+
+РЕДАКТИРОВАНИЕ:
+Ctrl+Z        - Отменить
+Ctrl+Y        - Повторить
+Ctrl+X        - Вырезать
+Ctrl+C        - Копировать
+Ctrl+V        - Вставить
+Ctrl+A        - Выделить все
+Ctrl+/        - Комментарий
+Ctrl+Space    - Автодополнение
+
+ВЫПОЛНЕНИЕ:
+F5            - Запустить код
+F9            - Запустить выделенное
+"""
+        messagebox.showinfo("Горячие клавиши", shortcuts_text)
+    
+    def show_settings(self):
+        """Показывает окно настроек (заглушка)"""
+        messagebox.showinfo("Настройки", "Окно настроек будет добавлено в следующей версии")
+    
     def update_status(self):
         """Обновление строки состояния"""
         try:
@@ -613,11 +1006,11 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
             filename = self.editor.current_file if self.editor.current_file else "Без названия"
             modified_mark = " *" if self.editor.is_modified else ""
             mode_suffix = "" if DOROLANG_MODULES_OK else " (DEMO MODE)"
-            self.title(f"DoroLang IDE - {filename}{modified_mark}{mode_suffix}")
+            self.title(f"DoroLang IDE v1.1 - {filename}{modified_mark}{mode_suffix}")
         except Exception as e:
             print(f"Ошибка обновления заголовка: {e}")
     
-    # Методы для работы с файлами
+    # Методы для работы с файлами (аналогично предыдущей версии)
     def new_file(self):
         """Создание нового файла"""
         try:
@@ -674,7 +1067,6 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
             else:
                 return self.save_as_file()
         except Exception as e:
-            print(f"Ошибка сохранения файла: {e}")
             messagebox.showerror("Ошибка", f"Не удалось сохранить файл: {e}")
             return False
     
@@ -778,6 +1170,7 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
                 return
             
             self.console.clear()
+            self.console.write_info("Запуск программы...")
             
             # Запускаем в отдельном потоке чтобы не блокировать GUI
             thread = threading.Thread(target=self._execute_code, args=(code,))
@@ -794,6 +1187,7 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
             selected_text = self.editor.text_area.get(tk.SEL_FIRST, tk.SEL_LAST)
             if selected_text.strip():
                 self.console.clear()
+                self.console.write_info("Запуск выделенного кода...")
                 
                 thread = threading.Thread(target=self._execute_code, args=(selected_text,))
                 thread.daemon = True
@@ -833,6 +1227,13 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
                         self.console.write(line + "\n", "error")
                     else:
                         self.console.write(line + "\n", "output")
+            
+            # Показываем статистику
+            variables = self.dorolang_interpreter.get_variables()
+            if variables:
+                self.console.write_info(f"Переменных в памяти: {len(variables)}")
+            
+            self.console.write_success("Выполнение завершено!")
             
         except Exception as e:
             if DOROLANG_MODULES_OK:
@@ -895,7 +1296,7 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
         """О программе"""
         try:
             mode_info = "Полный режим" if DOROLANG_MODULES_OK else "Демо-режим"
-            about_text = f"""DoroLang IDE v1.0
+            about_text = f"""DoroLang IDE v1.1 - Enhanced Edition
 Режим: {mode_info}
 
 Интегрированная среда разработки 
@@ -904,7 +1305,17 @@ class DoroLangIDE(tk.Tk):  # ← ПРАВИЛЬНО
 Автор: Dorofii Karnaukh
 Год: 2024
 
-Возможности:
+Новые возможности v1.1:
+✨ Булевы значения (true/false)
+✨ Логические операторы (and/or/not)
+✨ Условные конструкции (if/else)
+✨ Улучшенная подсветка синтаксиса
+✨ Автодополнение кода
+✨ Шаблоны кода
+✨ Проверка синтаксиса
+✨ Комментирование строк
+
+Базовые возможности:
 ✅ Редактор с подсветкой синтаксиса
 ✅ Номера строк
 ✅ Интерактивная консоль
@@ -939,10 +1350,10 @@ DoroLang - простой и мощный язык
 
 
 def main():
-    """Главная функция запуска DoroLang IDE"""
+    """Главная функция запуска Enhanced DoroLang IDE"""
     
     print("=" * 60)
-    print("🚀 ЗАПУСК DOROLANG IDE")
+    print("🚀 ЗАПУСК ENHANCED DOROLANG IDE v1.1")
     print("=" * 60)
     
     try:
@@ -960,13 +1371,13 @@ def main():
             return
         
         # Создаем и запускаем IDE
-        print("\nСоздание экземпляра IDE...")
+        print("\nСоздание экземпляра Enhanced IDE...")
         ide = DoroLangIDE()
         
-        print("IDE создана успешно, запуск...")
+        print("Enhanced IDE создана успешно, запуск...")
         ide.run()
         
-        print("IDE завершена.")
+        print("Enhanced IDE завершена.")
         
     except Exception as e:
         print(f"❌ КРИТИЧЕСКАЯ ОШИБКА: {e}")
@@ -976,7 +1387,7 @@ def main():
         # Показываем окно с ошибкой если возможно
         try:
             import tkinter.messagebox as mb
-            error_details = f"""Критическая ошибка запуска IDE:
+            error_details = f"""Критическая ошибка запуска Enhanced IDE:
 
 Ошибка: {str(e)}
 
@@ -992,7 +1403,7 @@ def main():
 
 Полная трассировка выведена в консоль."""
             
-            mb.showerror("Критическая ошибка DoroLang IDE", error_details)
+            mb.showerror("Критическая ошибка Enhanced DoroLang IDE", error_details)
         except:
             pass  # Если даже messagebox не работает
         
