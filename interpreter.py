@@ -1,3 +1,6 @@
+# --- DoroLang input function (может быть переопределена в IDE) ---
+def dorolang_input(prompt: str) -> str:
+    return input(prompt)
 """
 DoroLang Interpreter - Интерпретатор
 Выполняет программы DoroLang, обходя AST
@@ -8,9 +11,9 @@ DoroLang Interpreter - Интерпретатор
 from typing import Any, Dict, List
 from parser import ( # noqa: E402
     ASTNode, Expression, Statement, Program,
-    NumberLiteral, StringLiteral, BooleanLiteral, Identifier,
+    NumberLiteral, StringLiteral, BooleanLiteral, Identifier, InputCall,
     BinaryOperation, UnaryOperation, ParenthesizedExpression,
-    SayStatement, AssignmentStatement, IfStatement, BlockStatement
+    SayStatement, AssignmentStatement, IfStatement, BlockStatement,
 )
 
 
@@ -169,10 +172,28 @@ class Interpreter:
         
         elif isinstance(expression, ParenthesizedExpression):
             return self.evaluate_expression(expression.expression)
-        
-        else:
-            raise RuntimeError(f"Unknown expression type: {type(expression).__name__}")
+
+        # Новый: обработка input()
+        elif isinstance(expression, InputCall):
+            prompt = self.evaluate_expression(expression.prompt)
+            return dorolang_input(str(prompt))
+
+        raise RuntimeError(f"Unknown expression type: {type(expression).__name__}")
     
+    def _to_numeric(self, value: Any) -> Any:
+        """
+        Пытается преобразовать строковое значение в число (int или float).
+        Если преобразование невозможно, возвращает исходное значение.
+        """
+        if isinstance(value, str):
+            try:
+                if '.' in value:
+                    return float(value)
+                return int(value)
+            except (ValueError, TypeError):
+                return value
+        return value
+
     def apply_binary_operation(self, left: Any, operator: str, right: Any) -> Any:
         """
         Применяет бинарную операцию
@@ -195,122 +216,103 @@ class Interpreter:
         elif operator == 'or':
             return self._is_truthy(left) or self._is_truthy(right)
         
-        # Сложение
-        elif operator == '+':
-            # Числа + числа
-            if isinstance(left, (int, float)) and isinstance(right, (int, float)):
-                return left + right
-            # Строки + строки
-            elif isinstance(left, str) and isinstance(right, str):
-                return left + right
-            # Строка + число
-            elif isinstance(left, str) and isinstance(right, (int, float)):
-                return left + str(right)
-            # Число + строка
-            elif isinstance(left, (int, float)) and isinstance(right, str):
-                return str(left) + right
-            # Строка + булево
-            elif isinstance(left, str) and isinstance(right, bool):
-                return left + str(right).lower()
-            # Булево + строка
-            elif isinstance(left, bool) and isinstance(right, str):
-                return str(left).lower() + right
-            else:
-                raise RuntimeError(
-                    f"Cannot add {type(left).__name__} and {type(right).__name__}"
-                )
-        
-        # Остальные арифметические операции (только для чисел)
+        # Попытка преобразовать операнды в числа для арифметических и сравнительных операций
+        num_left = self._to_numeric(left)
+        num_right = self._to_numeric(right)
+
+        # Сложение: численное, если возможно, иначе конкатенация
+        if operator == '+':
+            if isinstance(num_left, (int, float)) and isinstance(num_right, (int, float)):
+                return num_left + num_right
+            
+            # Иначе - конкатенация строк. Булевы значения конвертируем в 'true'/'false'.
+            s_left = str(left).lower() if isinstance(left, bool) else str(left)
+            s_right = str(right).lower() if isinstance(right, bool) else str(right)
+            return s_left + s_right
+
+        # Остальные арифметические операции (требуют числа)
         elif operator in ['-', '*', '/', '%']:
-            if not isinstance(left, (int, float)) or not isinstance(right, (int, float)):
+            if not isinstance(num_left, (int, float)) or not isinstance(num_right, (int, float)):
                 raise RuntimeError(
-                    f"Cannot apply '{operator}' to {type(left).__name__} and {type(right).__name__}"
+                    f"Cannot apply '{operator}' to non-numeric values ('{left}' and '{right}')"
                 )
             
             if operator == '-':
-                return left - right
+                return num_left - num_right
             elif operator == '*':
-                return left * right
+                return num_left * num_right
             elif operator == '/':
-                if right == 0:
+                if num_right == 0:
                     raise RuntimeError("Division by zero")
-                return left / right
+                return num_left / num_right
             elif operator == '%':
-                if right == 0:
+                if num_right == 0:
                     raise RuntimeError("Modulo by zero")
-                return left % right
+                return num_left % num_right
         
         # Операторы сравнения
         elif operator in ['==', '!=', '<', '>', '<=', '>=']:
-            # Сравнение чисел
-            if isinstance(left, (int, float)) and isinstance(right, (int, float)):
-                if operator == '==': return left == right
-                if operator == '!=': return left != right
-                if operator == '<': return left < right
-                if operator == '>': return left > right
-                if operator == '<=': return left <= right
-                if operator == '>=': return left >= right
-            
-            # Сравнение строк (только на равенство/неравенство)
-            elif isinstance(left, str) and isinstance(right, str):
-                if operator == '==': return left == right
-                if operator == '!=': return left != right
-                raise RuntimeError(f"Cannot apply '{operator}' to strings")
-            
-            # Сравнение булевых
-            elif isinstance(left, bool) and isinstance(right, bool):
-                if operator == '==': return left == right
-                if operator == '!=': return left != right
-                raise RuntimeError(f"Cannot apply '{operator}' to booleans")
-            
+            # Используем уже преобразованные в числа значения, если это возможно
+            l, r = num_left, num_right
+
+            # Если оба числа — сравниваем как числа
+            if isinstance(l, (int, float)) and isinstance(r, (int, float)):
+                if operator == '==': return l == r
+                if operator == '!=': return l != r
+                if operator == '<': return l < r
+                if operator == '>': return l > r
+                if operator == '<=': return l <= r
+                if operator == '>=': return l >= r
+            # Если оба строки — сравниваем как строки
+            elif isinstance(l, str) and isinstance(r, str):
+                if operator == '==': return l == r
+                if operator == '!=': return l != r
+                if operator == '<': return l < r
+                if operator == '>': return l > r
+                if operator == '<=': return l <= r
+                if operator == '>=': return l >= r
+            # Если оба булевые — сравниваем как булевые
+            elif isinstance(l, bool) and isinstance(r, bool):
+                if operator == '==': return l == r
+                if operator == '!=': return l != r
+                if operator == '<': return l < r
+                if operator == '>': return l > r
+                if operator == '<=': return l <= r
+                if operator == '>=': return l >= r
             else:
-                # По умолчанию неравные типы не равны
+                # По умолчанию неравные типы не равны для '==' и '!='
                 if operator == '==': return False
                 if operator == '!=': return True
-                raise RuntimeError(f"Cannot compare {type(left).__name__} and {type(right).__name__}")
-        
-        else:
-            raise RuntimeError(f"Unknown binary operator: '{operator}'")
-    
+                # Для остальных операторов - ошибка
+                raise RuntimeError(f"Cannot compare {type(left).__name__} and {type(right).__name__} with '{operator}'")
+
     def apply_unary_operation(self, operator: str, operand: Any) -> Any:
-        """
-        Применяет унарную операцию
-        
-        Args:
-            operator: Унарный оператор (+, -, not)
-            operand: Операнд
-            
-        Returns:
-            Any: Результат операции
-            
-        Raises:
-            RuntimeError: При несовместимых типах
-        """
-        if operator == '-':
-            if not isinstance(operand, (int, float)):
-                raise RuntimeError(
-                    f"Cannot apply unary minus to {type(operand).__name__}"
-                )
-            return -operand
-        elif operator == '+':
-            if not isinstance(operand, (int, float)):
-                raise RuntimeError(
-                    f"Cannot apply unary plus to {type(operand).__name__}"
-                )
-            return operand
-        elif operator == 'not':
+        """Применяет унарную операцию"""
+        if operator == 'not':
             # Логический NOT - работает с любым типом
             return not self._is_truthy(operand)
-        else:
-            raise RuntimeError(f"Unknown unary operator: '{operator}'")
+
+        # Для унарных + и - пытаемся преобразовать операнд в число
+        num_operand = self._to_numeric(operand)
+
+        if not isinstance(num_operand, (int, float)):
+            raise RuntimeError(
+                f"Cannot apply unary '{operator}' to non-numeric value '{operand}'"
+            )
+
+        if operator == '-':
+            return -num_operand
+        elif operator == '+':
+            return num_operand
+        
+        raise RuntimeError(f"Unknown unary operator: '{operator}'")
     
     def _is_truthy(self, value: Any) -> bool:
         """
-        Проверяет значение на 'истинность'
-        
+        Проверяет значение на 'истинность'.
         Правила истинности в DoroLang:
         - false -> False
-        - true -> True  
+        - true -> True
         - 0 (число) -> False
         - любое другое число -> True
         - "" (пустая строка) -> False

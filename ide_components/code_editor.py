@@ -21,6 +21,7 @@ class SyntaxHighlighter:
 
         try:
             self.text_widget.tag_config("keyword", foreground=self.colors['keyword'], font=bold_font)
+            self.text_widget.tag_config("input", foreground="#A259FF", font=bold_font)  # Фиолетовый
             self.text_widget.tag_config("logical", foreground=self.colors['logical'], font=bold_font)
             self.text_widget.tag_config("boolean", foreground=self.colors['boolean'], font=bold_font)
             self.text_widget.tag_config("string", foreground=self.colors['string'])
@@ -33,20 +34,22 @@ class SyntaxHighlighter:
     
     def compile_regex(self):
         """Компиляция регулярного выражения с поддержкой новых токенов"""
-        keywords = ['say', 'kas', 'if', 'else']
+        keywords = ['say', 'kas', 'if', 'else', 'input']
         logical_ops = ['and', 'or', 'not']
         boolean_values = ['true', 'false']
-        
+
         keyword_pattern = r'\b(' + '|'.join(keywords) + r')\b'
+        input_pattern = r'\binput\b'
         logical_pattern = r'\b(' + '|'.join(logical_ops) + r')\b'
         boolean_pattern = r'\b(' + '|'.join(boolean_values) + r')\b'
 
         token_patterns = [
             ('COMMENT', r'#.*$'),
-            ('STRING', r'(".*?"|\'.*?\')'),
+            ('STRING', r'(\".*?\"|\'.*?\')'),
             ('NUMBER', r'\b\d+\.?\d*\b'),
             ('BOOLEAN', boolean_pattern),
             ('LOGICAL', logical_pattern),
+            ('INPUT', input_pattern),
             ('KEYWORD', keyword_pattern),
             ('OPERATOR', r'==|!=|<=|>=|[+\-*/%=<>]'),
             ('DELIMITER', r'[(){}]'),
@@ -71,7 +74,7 @@ class SyntaxHighlighter:
     def apply_highlight(self):
         """Применяет улучшенную подсветку синтаксиса ко всему тексту"""
         try:
-            tags_to_remove = ["keyword", "logical", "boolean", "string", "number", "comment", "operator", "delimiter"]
+            tags_to_remove = ["keyword", "logical", "boolean", "string", "number", "comment", "operator", "delimiter", "input"]
             for tag in tags_to_remove:
                 self.text_widget.tag_remove(tag, "1.0", tk.END)
 
@@ -80,7 +83,6 @@ class SyntaxHighlighter:
             for line_num, line in enumerate(content.splitlines(), 1):
                 for match in self.regex.finditer(line):
                     kind = match.lastgroup
-                    
                     tag_name = kind.lower() if kind else None
                     if tag_name in tags_to_remove:
                         start = match.start()
@@ -200,7 +202,7 @@ class CodeEditor:
         """Показывает выпадающий список автодополнения"""
         self._close_autocomplete()
         try:
-            keywords = ['say', 'kas', 'if', 'else', 'true', 'false', 'and', 'or', 'not']
+            keywords = ['say', 'kas', 'if', 'else', 'true', 'false', 'and', 'or', 'not', 'input']
             current_pos = self.text_area.index(tk.INSERT)
             line_start = current_pos.rsplit('.', 1)[0] + '.0'
             line_text = self.text_area.get(line_start, current_pos)

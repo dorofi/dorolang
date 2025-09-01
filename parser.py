@@ -1,3 +1,4 @@
+
 """
 DoroLang Parser - Синтаксический анализатор
 Строит абстрактное синтаксическое дерево (AST) из токенов
@@ -91,11 +92,15 @@ class UnaryOperation(Expression):
 
 @dataclass
 class ParenthesizedExpression(Expression):
-    """Выражения в скобках: (expression)"""
     expression: Expression
-    
+
+# Новый AST-узел для input
+@dataclass
+class InputCall(Expression):
+    def __init__(self, prompt: Expression):
+        self.prompt = prompt
     def __str__(self):
-        return f"({self.expression})"
+        return f"Input({self.prompt})"
 
 
 # ============== STATEMENTS ==============
@@ -270,24 +275,24 @@ class Parser:
             )
     
     def parse_if_statement(self) -> IfStatement:
-        """Парсит if-else утверждение"""
-        self.consume(TokenType.IF)
-        self.consume(TokenType.LPAREN, "Expected '(' after 'if'")
+        """Парсит if-else утверждение. Скобки вокруг условия опциональны."""
+        self.consume(TokenType.IF, "Expected 'if'")
+
+        # Условие теперь парсится напрямую.
+        # Pratt-парсер сам обработает скобки, если они есть,
+        # так как '(' является префиксным оператором.
         condition = self.parse_expression()
-        self.consume(TokenType.RPAREN, "Expected ')' after if condition")
-        
-        then_branch = self.parse_statement()
-        if not isinstance(then_branch, BlockStatement):
-             raise ParseError("Expected a block statement '{...}' after if condition", self.current_token())
+
+        then_branch = self.parse_block_statement()
 
         else_branch = None
         if self.match(TokenType.ELSE):
-            self.advance() # consume 'else'
+            self.consume(TokenType.ELSE) # Потребляем 'else'
+            # То, что идет после 'else' - это просто еще одно утверждение
+            # (может быть как блоком {...}, так и другим if)
             else_branch = self.parse_statement()
-            if not isinstance(else_branch, (BlockStatement, IfStatement)):
-                raise ParseError("Expected a block statement '{...}' or another 'if' after 'else'", self.current_token())
-
         return IfStatement(condition, then_branch, else_branch)
+
 
     def parse_block_statement(self) -> BlockStatement:
         """Парсит блок кода: { ... }"""
@@ -408,18 +413,32 @@ class Parser:
     
     def parse_primary(self) -> Expression:
         """Парсит первичные выражения"""
+        # input("...")
+        if self.match(TokenType.INPUT):
+            self.advance()  # consume 'input'
+            self.consume(TokenType.LPAREN, "Expected '(' after input")
+            # Проверяем, есть ли выражение внутри скобок
+            if self.match(TokenType.RPAREN):
+                self.advance()  # consume ')'
+                # Пустой prompt
+                return InputCall(StringLiteral("") )
+            else:
+                prompt_expr = self.parse_expression()
+                self.consume(TokenType.RPAREN, "Expected ')' after input prompt")
+                return InputCall(prompt_expr)
+
         # Скобки
         if self.match(TokenType.LPAREN):
             self.advance()  # consume '('
             expr = self.parse_expression()
             self.consume(TokenType.RPAREN, "Expected ')' after expression")
             return ParenthesizedExpression(expr)
-        
+
         # Числа
         elif self.match(TokenType.NUMBER):
             token = self.advance()
             return NumberLiteral(float(token.value))
-        
+
         # Строки
         elif self.match(TokenType.STRING):
             token = self.advance()
@@ -431,16 +450,16 @@ class Parser:
         elif self.match(TokenType.TRUE):
             self.advance()
             return BooleanLiteral(True)
-        
+
         elif self.match(TokenType.FALSE):
             self.advance()
             return BooleanLiteral(False)
-        
+
         # Идентификаторы (переменные)
         elif self.match(TokenType.IDENTIFIER):
             token = self.advance()
             return Identifier(token.value)
-        
+
         else:
             raise ParseError(
                 f"Unexpected token in expression: '{self.current_token().value}'", 

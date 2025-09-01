@@ -22,6 +22,7 @@ class TokenType(Enum):
     SAY = auto()        # say
     KAS = auto()        # kas
     IF = auto()         # if
+    INPUT = auto()      # input (НОВОЕ)
     ELSE = auto()       # else
     TRUE = auto()       # true
     FALSE = auto()      # false
@@ -100,6 +101,7 @@ class Lexer:
             (r'say\b', TokenType.SAY),
             (r'kas\b', TokenType.KAS),
             (r'if\b', TokenType.IF),
+            (r'input\b', TokenType.INPUT),  # НОВЫЙ
             (r'else\b', TokenType.ELSE),
             (r'true\b', TokenType.TRUE),
             (r'false\b', TokenType.FALSE),
@@ -276,6 +278,12 @@ say "пустая строка: """
 kas my_string="строкабезпробела"
 '''
 
+    input_test_code = '''
+# Тест новой функции input
+kas user_name = input("Как тебя зовут? ")
+say "Привет, " + user_name + "!"
+'''
+
     def run_lexer_test(name, code):
         """Вспомогательная функция для запуска тестов и вывода результата"""
         print(f"\n===== ЗАПУСК ТЕСТА: {name} =====")
@@ -298,3 +306,4 @@ kas my_string="строкабезпробела"
     # Запускаем оба теста
     run_lexer_test("Логические операторы", test_code)
     run_lexer_test("Парсинг строк", string_test_code)
+    run_lexer_test("Функция Input", input_test_code)

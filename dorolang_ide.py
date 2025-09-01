@@ -32,10 +32,19 @@ from ide_components import (
 )
 
 class DoroLangIDE(tk.Tk):
+    def setup_dorolang_input(self):
+        import interpreter
+        from tkinter import simpledialog
+        def dorolang_input_gui(prompt: str) -> str:
+            # Открываем диалог и сразу возвращаем результат
+            return simpledialog.askstring("Ввод данных", prompt, parent=self)
+        interpreter.dorolang_input = dorolang_input_gui
     """Главный класс улучшенной IDE для DoroLang"""
     
     def __init__(self):
         super().__init__()
+        self.setup_dorolang_input()
+        self.setup_fonts()
         try:
             print("Инициализация Enhanced DoroLang IDE...")
 
@@ -167,7 +176,23 @@ class DoroLangIDE(tk.Tk):
             ])
         except Exception as e:
             print(f"Ошибка настройки стилей: {e}")
-    
+
+    def setup_fonts(self):
+        """Устанавливает современные шрифты для улучшения вида."""
+        try:
+            # Устанавливаем более современный шрифт по умолчанию для интерфейса
+            default_font = font.nametofont("TkDefaultFont")
+            default_font.configure(family="Segoe UI", size=10)
+
+            # Для текста в редакторе и консоли лучше использовать моноширинный шрифт
+            text_font = font.nametofont("TkTextFont")
+            text_font.configure(family="Consolas", size=11)
+
+            print("✅ Установлены современные шрифты (Segoe UI, Consolas).")
+        except Exception as e:
+            print(f"⚠️ Не удалось обновить шрифты: {e}")
+
+
     def setup_menu(self):
         """Создание расширенного меню"""
         try:
@@ -779,6 +804,38 @@ F9            - Запустить выделенное
         if editor:
             editor.show_autocomplete()
     
+    def execute_interactive_line(self, command):
+        """Выполняет одну строку кода из интерактивной консоли."""
+        try:
+            if not DOROLANG_MODULES_OK:
+                self.console.write_warning("Интерактивная консоль недоступна в демо-режиме.")
+                return
+
+            # Отображаем введенную команду
+            self.console.write(f">>> {command}\n", "input")
+
+            # Проверяем на специальные команды
+            if command.strip().lower() == 'clear':
+                self.clear_console()
+                return
+            if command.strip().lower() == 'reset':
+                self.reset_interpreter()
+                return
+
+            # "Умное" выполнение: если это не похоже на оператор, считаем это выражением для вывода
+            is_statement = re.match(r'^\s*(say|kas|if)', command)
+            code_to_run = command if is_statement else f'say {command}'
+
+            # Запускаем в потоке, чтобы не блокировать GUI
+            thread = threading.Thread(target=self._execute_code, args=(code_to_run, True)) # True for interactive
+            thread.daemon = True
+            thread.start()
+
+        except Exception as e:
+            self.console.write_error(f"Ошибка интерактивного выполнения: {e}")
+            print(f"Ошибка интерактивного выполнения: {e}")
+            traceback.print_exc()
+
     # Методы выполнения кода
     def run_code(self):
         """Запуск всего кода"""
@@ -800,10 +857,8 @@ F9            - Запустить выделенное
             if editor.is_modified and editor.current_file:
                 self.save_file()
 
-            # Запускаем в отдельном потоке чтобы не блокировать GUI
-            thread = threading.Thread(target=self._execute_code, args=(code,))
-            thread.daemon = True
-            thread.start()
+            # Запускаем через after, чтобы не блокировать главный поток и корректно работать с диалогами
+            self.after(0, lambda: self._execute_code(code, False))
             
         except Exception as e:
             print(f"Ошибка запуска кода: {e}")
@@ -822,7 +877,7 @@ F9            - Запустить выделенное
                 self.console.clear()
                 self.console.write_info("Запуск выделенного кода...")
                 
-                thread = threading.Thread(target=self._execute_code, args=(selected_text,))
+                thread = threading.Thread(target=self._execute_code, args=(selected_text, False))
                 thread.daemon = True
                 thread.start()
             else:
@@ -833,8 +888,8 @@ F9            - Запустить выделенное
             print(f"Ошибка запуска выделения: {e}")
             self.console.write_error(f"Ошибка запуска выделения: {e}")
     
-    def _execute_code(self, code):
-        """Выполнение кода DoroLang"""
+    def _execute_code(self, code, interactive=False):
+        """Выполнение кода DoroLang. interactive=True для REPL режима."""
         try:
             if not DOROLANG_MODULES_OK:
                 # Демо-режим
@@ -856,17 +911,20 @@ F9            - Запустить выделенное
             # Выводим результат
             if output:
                 for line in output:
-                    if "❌" in line:
+                    # В интерактивном режиме не показываем иконку ошибки, т.к. она уже в теге
+                    if "❌" in line and not interactive:
                         self.console.write(line + "\n", "error")
                     else:
-                        self.console.write(line + "\n", "output")
+                        # Убираем иконку, т.к. тег уже есть
+                        clean_line = line.replace("❌ ", "") if "❌" in line else line
+                        self.console.write(clean_line + "\n", "output")
             
-            # Показываем статистику
-            variables = self.dorolang_interpreter.get_variables()
-            if variables:
-                self.console.write_info(f"Переменных в памяти: {len(variables)}")
-            
-            self.console.write_success("Выполнение завершено!")
+            # В интерактивном режиме не показываем статистику, чтобы не засорять вывод
+            if not interactive:
+                variables = self.dorolang_interpreter.get_variables()
+                if variables:
+                    self.console.write_info(f"Переменных в памяти: {len(variables)}")
+                self.console.write_success("Выполнение завершено!")
             
         except Exception as e:
             if DOROLANG_MODULES_OK:
@@ -896,6 +954,7 @@ F9            - Запустить выделенное
         """Сброс интерпретатора"""
         try:
             self.dorolang_interpreter.reset()
+            self.console.clear()
             self.console.write_info("Переменные интерпретатора сброшены")
         except Exception as e:
             print(f"Ошибка сброса интерпретатора: {e}")
@@ -1111,6 +1170,19 @@ def main():
     print("=" * 60)
     
     try:
+        # --- УЛУЧШЕНИЕ КАЧЕСТВА ИНТЕРФЕЙСА (DPI AWARENESS) ---
+        # Это делает приложение "осведомленным" о масштабировании экрана в Windows.
+        # В результате текст и элементы интерфейса перестают быть размытыми на дисплеях
+        # с масштабированием больше 100% (например, 125% или 150%).
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                ctypes.windll.shcore.SetProcessDpiAwareness(1)
+                print("✅ DPI-awareness установлен для четкого рендеринга на Windows.")
+            except (ImportError, AttributeError):
+                print("⚠️ Не удалось установить DPI-awareness (модуль ctypes или функция не найдены).")
+        # --- КОНЕЦ УЛУЧШЕНИЯ ---
+
         # Диагностика системы
         print(f"Python версия: {sys.version}")
         print(f"Рабочая папка: {os.getcwd()}")
