@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DoroLang - Programming Language Tutorial</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            color: #666;
+            font-size: 1.2em;
+        }
+        
+        .nav {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }
+        
+        .nav ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .nav a:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .section {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.5em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+            position: relative;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            tab-size: 4;
+            -moz-tab-size: 4;
+        }
+        
+        .code-block::before {
+            content: 'doro';
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .code-block .keyword { color: #569cd6; }
+        .code-block .string { color: #ce9178; }
+        .code-block .number { color: #b5cea8; }
+        .code-block .comment { color: #6a9955; font-style: italic; }
+        .code-block .operator { color: #d4d4d4; }
+        
+        /* Ensure code blocks preserve formatting */
+        .code-block code {
+            display: block;
+            white-space: pre;
+            font-family: inherit;
+        }
+        
+        .example {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .example h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .output {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-family: 'Consolas', monospace;
+        }
+        
+        .output::before {
+            content: 'Output:';
+            font-weight: bold;
+            color: #4caf50;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .feature-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .feature-card h4 {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+        
+        .tip {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .tip::before {
+            content: '💡 Tip:';
+            font-weight: bold;
+            color: #856404;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .warning {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .warning::before {
+            content: '⚠️ Warning:';
+            font-weight: bold;
+            color: #721c24;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        table th, table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        table th {
+            background: #667eea;
+            color: white;
+        }
+        
+        table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        footer {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .nav ul {
+                flex-direction: column;
+            }
+            
+            header h1 {
+                font-size: 2em;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐉 DoroLang</h1>
+            <p>Educational Programming Language - Complete Tutorial</p>
+            <p style="margin-top: 10px; font-size: 0.9em; color: #888;">Learn programming from scratch with DoroLang</p>
+        </header>
+        
+        <nav class="nav">
+            <ul>
+                <li><a href="#introduction">Introduction</a></li>
+                <li><a href="#basics">Basics</a></li>
+                <li><a href="#variables">Variables</a></li>
+                <li><a href="#operators">Operators</a></li>
+                <li><a href="#conditionals">Conditionals</a></li>
+                <li><a href="#loops">Loops</a></li>
+                <li><a href="#functions">Functions</a></li>
+                <li><a href="#input">Input</a></li>
+                <li><a href="#examples">Examples</a></li>
+            </ul>
+        </nav>
+        
+        <section id="introduction" class="section">
+            <h2>📖 Introduction</h2>
+            <p><strong>DoroLang</strong> is a simple, educational programming language designed to help beginners learn programming concepts. It has a clean syntax similar to Python and pseudocode, making it easy to understand and use.</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🎯 Simple Syntax</h4>
+                    <p>Easy to read and write, perfect for learning</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🚀 Fast Learning</h4>
+                    <p>Start programming in minutes, not hours</p>
+                </div>
+                <div class="feature-card">
+                    <h4>💻 Full IDE</h4>
+                    <p>Complete development environment included</p>
+                </div>
+            </div>
+            
+            <h3>Why DoroLang?</h3>
+            <ul style="margin-left: 30px; margin-top: 15px;">
+                <li>No complex syntax to memorize</li>
+                <li>Focus on programming concepts, not language quirks</li>
+                <li>Perfect for absolute beginners</li>
+                <li>Great for teaching programming fundamentals</li>
+            </ul>
+        </section>
+        
+        <section id="basics" class="section">
+            <h2>🔤 Basic Syntax</h2>
+            
+            <h3>Hello World</h3>
+            <p>Every programming journey starts with "Hello World":</p>
+            <div class="code-block"><span class="keyword">say</span> <span class="string">"Hello, World!"</span></div>
+            <div class="output">
+Hello, World!
+            </div>
+            
+            <h3>Comments</h3>
+            <p>Comments help explain your code. They are ignored by the interpreter:</p>
+            <div class="code-block"><span class="comment"># This is a comment</span>
+<span class="keyword">say</span> <span class="string">"This will be printed"</span>
+<span class="comment"># say "This won't be printed"</span></div>
+            
+            <div class="tip">
+Comments start with <code>#</code> and continue to the end of the line. Use them to document your code!
+            </div>
+        </section>
+        
+        <section id="variables" class="section">
+            <h2>📦 Variables</h2>
+            <p>Variables store data that can be used later in your program. In DoroLang, you declare variables using the <code>kas</code> keyword.</p>
+            
+            <h3>Declaring Variables</h3>
+            <div class="code-block"><span class="keyword">kas</span> name = <span class="string">"Alice"</span>
+<span class="keyword">kas</span> age = 25
+<span class="keyword">kas</span> is_student = <span class="keyword">true</span>
+
+<span class="keyword">say</span> <span class="string">"Name: "</span> + name
+<span class="keyword">say</span> <span class="string">"Age: "</span> + age
+<span class="keyword">say</span> <span class="string">"Student: "</span> + is_student</div>
+            <div class="output">
+Name: Alice
+Age: 25
+Student: true
+            </div>
+            
+            <h3>Data Types</h3>
+            <p>DoroLang supports three main data types:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Example</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Numbers</strong></td>
+                        <td><code>42</code>, <code>3.14</code></td>
+                        <td>Integers and floating-point numbers</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Strings</strong></td>
+                        <td><code>"hello"</code>, <code>'world'</code></td>
+                        <td>Text enclosed in single or double quotes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Booleans</strong></td>
+                        <td><code>true</code>, <code>false</code></td>
+                        <td>Logical true/false values</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="example">
+                <h4>Example: Working with Variables</h4>
+                <div class="code-block"><span class="keyword">kas</span> first_name = <span class="string">"John"</span>
+<span class="keyword">kas</span> last_name = <span class="string">"Doe"</span>
+<span class="keyword">kas</span> full_name = first_name + <span class="string">" "</span> + last_name
+
+<span class="keyword">say</span> full_name</div>
+                <div class="output">
+John Doe
+                </div>
+            </div>
+        </section>
+        
+        <section id="operators" class="section">
+            <h2>🔧 Operators</h2>
+            
+            <h3>Arithmetic Operators</h3>
+            <p>Perform mathematical operations:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Operator</th>
+                        <th>Name</th>
+                        <th>Example</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>+</code></td>
+                        <td>Addition</td>
+                        <td><code>5 + 3</code></td>
+                        <td><code>8</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>-</code></td>
+                        <td>Subtraction</td>
+                        <td><code>10 - 4</code></td>
+                        <td><code>6</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>*</code></td>
+                        <td>Multiplication</td>
+                        <td><code>3 * 4</code></td>
+                        <td><code>12</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>/</code></td>
+                        <td>Division</td>
+                        <td><code>15 / 3</code></td>
+                        <td><code>5</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>%</code></td>
+                        <td>Modulo (remainder)</td>
+                        <td><code>17 % 5</code></td>
+                        <td><code>2</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="example">
+                <h4>Example: Arithmetic Operations</h4>
+                <div class="code-block"><span class="keyword">kas</span> a = 15
+<span class="keyword">kas</span> b = 7
+
+<span class="keyword">say</span> <span class="string">"Sum: "</span> + (a + b)
+<span class="keyword">say</span> <span class="string">"Difference: "</span> + (a - b)
+<span class="keyword">say</span> <span class="string">"Product: "</span> + (a * b)
+<span class="keyword">say</span> <span class="string">"Quotient: "</span> + (a / b)
+<span class="keyword">say</span> <span class="string">"Remainder: "</span> + (a % b)</div>
+                <div class="output">
+Sum: 22
+Difference: 8
+Product: 105
+Quotient: 2.142857142857143
+Remainder: 1
+                </div>
+            </div>
+            
+            <h3>Comparison Operators</h3>
+            <p>Compare values and return <code>true</code> or <code>false</code>:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Operator</th>
+                        <th>Meaning</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>==</code></td>
+                        <td>Equal to</td>
+                        <td><code>5 == 5</code> → <code>true</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>!=</code></td>
+                        <td>Not equal to</td>
+                        <td><code>5 != 3</code> → <code>true</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>&lt;</code></td>
+                        <td>Less than</td>
+                        <td><code>3 &lt; 5</code> → <code>true</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>&gt;</code></td>
+                        <td>Greater than</td>
+                        <td><code>5 &gt; 3</code> → <code>true</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>&lt;=</code></td>
+                        <td>Less than or equal</td>
+                        <td><code>5 &lt;= 5</code> → <code>true</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>&gt;=</code></td>
+                        <td>Greater than or equal</td>
+                        <td><code>5 &gt;= 3</code> → <code>true</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>Logical Operators</h3>
+            <p>Combine boolean expressions:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Operator</th>
+                        <th>Meaning</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>and</code></td>
+                        <td>Both must be true</td>
+                        <td><code>true and false</code> → <code>false</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>or</code></td>
+                        <td>At least one must be true</td>
+                        <td><code>true or false</code> → <code>true</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>not</code></td>
+                        <td>Negation</td>
+                        <td><code>not true</code> → <code>false</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="example">
+                <h4>Example: Logical Operations</h4>
+                <div class="code-block"><span class="keyword">kas</span> x = 10
+<span class="keyword">kas</span> y = 5
+
+<span class="keyword">kas</span> result1 = x &gt; 5 <span class="keyword">and</span> y &lt; 10
+<span class="keyword">kas</span> result2 = x &lt; 5 <span class="keyword">or</span> y &lt; 10
+<span class="keyword">kas</span> result3 = <span class="keyword">not</span> (x == y)
+
+<span class="keyword">say</span> <span class="string">"x &gt; 5 and y &lt; 10: "</span> + result1
+<span class="keyword">say</span> <span class="string">"x &lt; 5 or y &lt; 10: "</span> + result2
+<span class="keyword">say</span> <span class="string">"not (x == y): "</span> + result3</div>
+                <div class="output">
+x > 5 and y < 10: true
+x < 5 or y < 10: true
+not (x == y): true
+                </div>
+            </div>
+        </section>
+        
+        <section id="conditionals" class="section">
+            <h2>🔀 Conditional Statements</h2>
+            <p>Conditional statements allow your program to make decisions based on conditions.</p>
+            
+            <h3>If Statement</h3>
+            <p>The basic conditional structure:</p>
+            <div class="code-block"><span class="keyword">if</span> (condition) {
+    <span class="comment"># code to execute if condition is true</span>
+}</div>
+            
+            <div class="example">
+                <h4>Example: Simple If Statement</h4>
+                <div class="code-block"><span class="keyword">kas</span> age = 20
+
+<span class="keyword">if</span> (age &gt;= 18) {
+    <span class="keyword">say</span> <span class="string">"You are an adult"</span>
+}</div>
+                <div class="output">
+You are an adult
+                </div>
+            </div>
+            
+            <h3>If-Else Statement</h3>
+            <p>Execute different code based on condition:</p>
+            <div class="code-block"><span class="keyword">if</span> (condition) {
+    <span class="comment"># code if true</span>
+} <span class="keyword">else</span> {
+    <span class="comment"># code if false</span>
+}</div>
+            
+            <div class="example">
+                <h4>Example: If-Else</h4>
+                <div class="code-block"><span class="keyword">kas</span> score = 85
+
+<span class="keyword">if</span> (score &gt;= 60) {
+    <span class="keyword">say</span> <span class="string">"You passed!"</span>
+} <span class="keyword">else</span> {
+    <span class="keyword">say</span> <span class="string">"You failed"</span>
+}</div>
+                <div class="output">
+You passed!
+                </div>
+            </div>
+            
+            <h3>Nested Conditionals</h3>
+            <p>You can nest if statements inside other if statements:</p>
+            <div class="code-block"><span class="keyword">kas</span> age = 25
+<span class="keyword">kas</span> has_license = <span class="keyword">true</span>
+
+<span class="keyword">if</span> (age &gt;= 18) {
+    <span class="keyword">if</span> (has_license) {
+        <span class="keyword">say</span> <span class="string">"You can drive!"</span>
+    } <span class="keyword">else</span> {
+        <span class="keyword">say</span> <span class="string">"You need a license"</span>
+    }
+} <span class="keyword">else</span> {
+    <span class="keyword">say</span> <span class="string">"You are too young"</span>
+}</div>
+            
+            <div class="tip">
+Use parentheses around conditions for clarity, though they're optional in DoroLang.
+            </div>
+        </section>
+        
+        <section id="loops" class="section">
+            <h2>🔄 Loops</h2>
+            <p>Loops allow you to repeat code multiple times. DoroLang supports <code>while</code> and <code>for</code> loops.</p>
+            
+            <h3>While Loop</h3>
+            <p>Repeats code while a condition is true:</p>
+            <div class="code-block"><span class="keyword">while</span> (condition) {
+    <span class="comment"># code to repeat</span>
+}</div>
+            
+            <div class="example">
+                <h4>Example: While Loop</h4>
+                <div class="code-block"><span class="keyword">kas</span> counter = 1
+
+<span class="keyword">while</span> (counter &lt;= 5) {
+    <span class="keyword">say</span> <span class="string">"Count: "</span> + counter
+    <span class="keyword">kas</span> counter = counter + 1
+}</div>
+                <div class="output">
+Count: 1
+Count: 2
+Count: 3
+Count: 4
+Count: 5
+                </div>
+            </div>
+            
+            <div class="warning">
+Be careful with while loops! Make sure the condition eventually becomes false, or you'll create an infinite loop.
+            </div>
+            
+            <h3>For Loop</h3>
+            <p>Repeats code a specific number of times:</p>
+            <div class="code-block"><span class="keyword">for</span> <span class="keyword">kas</span> variable = start <span class="keyword">to</span> end {
+    <span class="comment"># code to repeat</span>
+}</div>
+            
+            <div class="example">
+                <h4>Example: For Loop</h4>
+                <div class="code-block"><span class="keyword">say</span> <span class="string">"Counting from 1 to 5:"</span>
+
+<span class="keyword">for</span> <span class="keyword">kas</span> i = 1 <span class="keyword">to</span> 5 {
+    <span class="keyword">say</span> <span class="string">"Number: "</span> + i
+}</div>
+                <div class="output">
+Counting from 1 to 5:
+Number: 1
+Number: 2
+Number: 3
+Number: 4
+Number: 5
+                </div>
+            </div>
+            
+            <h3>For Loop with Step</h3>
+            <p>You can specify a step value to count by increments:</p>
+            <div class="code-block"><span class="keyword">for</span> <span class="keyword">kas</span> i = 0 <span class="keyword">to</span> 10 <span class="keyword">step</span> 2 {
+    <span class="keyword">say</span> i
+}</div>
+            <div class="output">
+0
+2
+4
+6
+8
+10
+            </div>
+            
+            <h3>Nested Loops</h3>
+            <p>Loops can be nested inside other loops:</p>
+            <div class="example">
+                <h4>Example: Multiplication Table</h4>
+                <div class="code-block"><span class="keyword">for</span> <span class="keyword">kas</span> i = 1 <span class="keyword">to</span> 3 {
+    <span class="keyword">for</span> <span class="keyword">kas</span> j = 1 <span class="keyword">to</span> 3 {
+        <span class="keyword">kas</span> result = i * j
+        <span class="keyword">say</span> i + <span class="string">" x "</span> + j + <span class="string">" = "</span> + result
+    }
+    <span class="keyword">say</span> <span class="string">"---"</span>
+}</div>
+                <div class="output">
+1 x 1 = 1
+1 x 2 = 2
+1 x 3 = 3
+---
+2 x 1 = 2
+2 x 2 = 4
+2 x 3 = 6
+---
+3 x 1 = 3
+3 x 2 = 6
+3 x 3 = 9
+---
+                </div>
+            </div>
+        </section>
+        
+        <section id="functions" class="section">
+            <h2>🔧 Functions</h2>
+            <p>Functions allow you to organize code into reusable blocks. You can define functions and call them multiple times with different arguments.</p>
+            
+            <h3>Defining Functions</h3>
+            <p>Use the <code>function</code> keyword to define a function:</p>
+            <div class="code-block"><span class="keyword">function</span> function_name(parameter1, parameter2) {
+    <span class="comment"># function body</span>
+    <span class="keyword">return</span> value
+}</div>
+            
+            <div class="example">
+                <h4>Example: Simple Function</h4>
+                <div class="code-block"><span class="keyword">function</span> greet(name) {
+    <span class="keyword">return</span> <span class="string">"Hello, "</span> + name + <span class="string">"!"</span>
+}
+
+<span class="keyword">say</span> greet(<span class="string">"Alice"</span>)
+<span class="keyword">say</span> greet(<span class="string">"Bob"</span>)</div>
+                <div class="output">
+Hello, Alice!
+Hello, Bob!
+                </div>
+            </div>
+            
+            <h3>Functions with Multiple Parameters</h3>
+            <div class="example">
+                <h4>Example: Calculator Functions</h4>
+                <div class="code-block"><span class="keyword">function</span> add(a, b) {
+    <span class="keyword">return</span> a + b
+}
+
+<span class="keyword">function</span> multiply(x, y) {
+    <span class="keyword">return</span> x * y
+}
+
+<span class="keyword">say</span> <span class="string">"Sum: "</span> + add(5, 3)
+<span class="keyword">say</span> <span class="string">"Product: "</span> + multiply(4, 7)</div>
+                <div class="output">
+Sum: 8
+Product: 28
+                </div>
+            </div>
+            
+            <h3>Return Statement</h3>
+            <p>The <code>return</code> statement exits the function and returns a value:</p>
+            <div class="code-block"><span class="keyword">function</span> max(a, b) {
+    <span class="keyword">if</span> (a &gt; b) {
+        <span class="keyword">return</span> a
+    } <span class="keyword">else</span> {
+        <span class="keyword">return</span> b
+    }
+}
+
+<span class="keyword">say</span> max(10, 5)</div>
+            <div class="output">
+10
+            </div>
+            
+            <h3>Functions Without Return Value</h3>
+            <p>Functions can also be used to perform actions without returning a value:</p>
+            <div class="example">
+                <h4>Example: Function for Display</h4>
+                <div class="code-block"><span class="keyword">function</span> print_header() {
+    <span class="keyword">say</span> <span class="string">"=========="</span>
+    <span class="keyword">say</span> <span class="string">"  HEADER"</span>
+    <span class="keyword">say</span> <span class="string">"=========="</span>
+}
+
+print_header()
+<span class="keyword">say</span> <span class="string">"Content here"</span>
+print_header()</div>
+                <div class="output">
+==========
+  HEADER
+==========
+Content here
+==========
+  HEADER
+==========
+                </div>
+            </div>
+            
+            <h3>Complex Functions</h3>
+            <div class="example">
+                <h4>Example: Function with Conditionals</h4>
+                <div class="code-block"><span class="keyword">function</span> check_age(age) {
+    <span class="keyword">if</span> (age &gt;= 18) {
+        <span class="keyword">return</span> <span class="string">"Adult"</span>
+    } <span class="keyword">else</span> {
+        <span class="keyword">if</span> (age &gt;= 13) {
+            <span class="keyword">return</span> <span class="string">"Teenager"</span>
+        } <span class="keyword">else</span> {
+            <span class="keyword">return</span> <span class="string">"Child"</span>
+        }
+    }
+}
+
+<span class="keyword">say</span> check_age(25)
+<span class="keyword">say</span> check_age(15)
+<span class="keyword">say</span> check_age(8)</div>
+                <div class="output">
+Adult
+Teenager
+Child
+                </div>
+            </div>
+            
+            <h3>Functions with Loops</h3>
+            <div class="example">
+                <h4>Example: Function Using Loops</h4>
+                <div class="code-block"><span class="keyword">function</span> count_to_n(n) {
+    <span class="keyword">for</span> <span class="keyword">kas</span> i = 1 <span class="keyword">to</span> n {
+        <span class="keyword">say</span> i
+    }
+}
+
+count_to_n(5)</div>
+                <div class="output">
+1
+2
+3
+4
+5
+                </div>
+            </div>
+            
+            <div class="tip">
+Functions help organize your code and make it reusable. Define functions for tasks you need to perform multiple times!
+            </div>
+        </section>
+        
+        <section id="input" class="section">
+            <h2>⌨️ User Input</h2>
+            <p>The <code>input()</code> function allows your program to get data from the user.</p>
+            
+            <h3>Basic Input</h3>
+            <div class="code-block"><span class="keyword">kas</span> name = <span class="keyword">input</span>(<span class="string">"What is your name? "</span>)
+<span class="keyword">say</span> <span class="string">"Hello, "</span> + name + <span class="string">"!"</span></div>
+            
+            <div class="example">
+                <h4>Example: Interactive Program</h4>
+                <div class="code-block"><span class="keyword">kas</span> user_name = <span class="keyword">input</span>(<span class="string">"Enter your name: "</span>)
+<span class="keyword">kas</span> age_str = <span class="keyword">input</span>(<span class="string">"Enter your age: "</span>)
+<span class="keyword">kas</span> age = age_str
+
+<span class="keyword">say</span> <span class="string">"Welcome, "</span> + user_name + <span class="string">"!"</span>
+
+<span class="keyword">if</span> (age &gt;= 18) {
+    <span class="keyword">say</span> <span class="string">"You are an adult"</span>
+} <span class="keyword">else</span> {
+    <span class="keyword">say</span> <span class="string">"You are a minor"</span>
+}</div>
+            </div>
+            
+            <div class="tip">
+The <code>input()</code> function always returns a string. If you need a number, DoroLang will automatically convert it when used in arithmetic operations.
+            </div>
+        </section>
+        
+        <section id="examples" class="section">
+            <h2>💡 Practical Examples</h2>
+            
+            <h3>Example 1: Calculator</h3>
+            <div class="code-block"><span class="comment"># Simple calculator</span>
+<span class="keyword">kas</span> a = 15
+<span class="keyword">kas</span> b = 7
+
+<span class="keyword">say</span> <span class="string">"Number A: "</span> + a
+<span class="keyword">say</span> <span class="string">"Number B: "</span> + b
+<span class="keyword">say</span> <span class="string">"Sum: "</span> + (a + b)
+<span class="keyword">say</span> <span class="string">"Difference: "</span> + (a - b)
+<span class="keyword">say</span> <span class="string">"Product: "</span> + (a * b)
+<span class="keyword">say</span> <span class="string">"Quotient: "</span> + (a / b)</div>
+            
+            <h3>Example 2: Number Guessing Game</h3>
+            <div class="code-block"><span class="comment"># Simple number guessing game</span>
+<span class="keyword">kas</span> secret_number = 7
+<span class="keyword">kas</span> guess = <span class="keyword">input</span>(<span class="string">"Guess a number between 1 and 10: "</span>)
+<span class="keyword">kas</span> guess_num = guess
+
+<span class="keyword">if</span> (guess_num == secret_number) {
+    <span class="keyword">say</span> <span class="string">"Congratulations! You guessed it!"</span>
+} <span class="keyword">else</span> {
+    <span class="keyword">if</span> (guess_num &lt; secret_number) {
+        <span class="keyword">say</span> <span class="string">"Too low! Try again."</span>
+    } <span class="keyword">else</span> {
+        <span class="keyword">say</span> <span class="string">"Too high! Try again."</span>
+    }
+}</div>
+            
+            <h3>Example 3: Countdown Timer</h3>
+            <div class="code-block"><span class="comment"># Countdown from 10 to 0</span>
+<span class="keyword">say</span> <span class="string">"Countdown starting..."</span>
+
+<span class="keyword">for</span> <span class="keyword">kas</span> i = 10 <span class="keyword">to</span> 0 <span class="keyword">step</span> -1 {
+    <span class="keyword">say</span> i
+}
+
+<span class="keyword">say</span> <span class="string">"Blast off! 🚀"</span></div>
+            
+            <h3>Example 4: Grade Calculator</h3>
+            <div class="code-block"><span class="comment"># Calculate and display grade</span>
+<span class="keyword">kas</span> score = 85
+<span class="keyword">kas</span> attendance = 90
+
+<span class="keyword">say</span> <span class="string">"Score: "</span> + score
+<span class="keyword">say</span> <span class="string">"Attendance: "</span> + attendance + <span class="string">"%"</span>
+
+<span class="keyword">kas</span> excellent = score &gt;= 90 <span class="keyword">and</span> attendance &gt;= 85
+<span class="keyword">kas</span> good = (score &gt;= 80 <span class="keyword">and</span> attendance &gt;= 80) <span class="keyword">or</span> score &gt;= 85
+
+<span class="keyword">if</span> (excellent) {
+    <span class="keyword">say</span> <span class="string">"Grade: A - Excellent work!"</span>
+} <span class="keyword">else</span> {
+    <span class="keyword">if</span> (good) {
+        <span class="keyword">say</span> <span class="string">"Grade: B - Good job!"</span>
+    } <span class="keyword">else</span> {
+        <span class="keyword">say</span> <span class="string">"Grade: C - Needs improvement"</span>
+    }
+}</div>
+            
+            <h3>Example 5: Factorial Calculator</h3>
+            <div class="code-block"><span class="comment"># Calculate factorial of a number</span>
+<span class="keyword">kas</span> n = 5
+<span class="keyword">kas</span> factorial = 1
+<span class="keyword">kas</span> i = 1
+
+<span class="keyword">while</span> (i &lt;= n) {
+    <span class="keyword">kas</span> factorial = factorial * i
+    <span class="keyword">kas</span> i = i + 1
+}
+
+<span class="keyword">say</span> <span class="string">"Factorial of "</span> + n + <span class="string">" is "</span> + factorial</div>
+            <div class="output">
+Factorial of 5 is 120
+            </div>
+            
+            <h3>Example 6: Function-Based Calculator</h3>
+            <div class="code-block"><span class="comment"># Calculator using functions</span>
+<span class="keyword">function</span> add(a, b) {
+    <span class="keyword">return</span> a + b
+}
+
+<span class="keyword">function</span> subtract(a, b) {
+    <span class="keyword">return</span> a - b
+}
+
+<span class="keyword">function</span> calculate(operation, x, y) {
+    <span class="keyword">if</span> (operation == <span class="string">"add"</span>) {
+        <span class="keyword">return</span> add(x, y)
+    } <span class="keyword">else</span> {
+        <span class="keyword">return</span> subtract(x, y)
+    }
+}
+
+<span class="keyword">say</span> <span class="string">"10 + 5 = "</span> + calculate(<span class="string">"add"</span>, 10, 5)
+<span class="keyword">say</span> <span class="string">"10 - 5 = "</span> + calculate(<span class="string">"subtract"</span>, 10, 5)</div>
+            <div class="output">
+10 + 5 = 15
+10 - 5 = 5
+            </div>
+            
+            <h3>Example 7: Recursive Function</h3>
+            <div class="code-block"><span class="comment"># Calculate factorial using function</span>
+<span class="keyword">function</span> factorial(n) {
+    <span class="keyword">if</span> (n &lt;= 1) {
+        <span class="keyword">return</span> 1
+    } <span class="keyword">else</span> {
+        <span class="keyword">return</span> n * factorial(n - 1)
+    }
+}
+
+<span class="keyword">say</span> <span class="string">"Factorial of 5: "</span> + factorial(5)</div>
+            <div class="output">
+Factorial of 5: 120
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>📋 Complete Syntax Reference</h2>
+            <p>Quick reference for all DoroLang syntax elements:</p>
+            
+            <h3>Keywords</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Keyword</th>
+                        <th>Usage</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>kas</code></td>
+                        <td>Variable declaration</td>
+                        <td><code>kas x = 10</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>say</code></td>
+                        <td>Output to console</td>
+                        <td><code>say "Hello"</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>if</code></td>
+                        <td>Conditional statement</td>
+                        <td><code>if (x > 5) { ... }</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>else</code></td>
+                        <td>Alternative branch</td>
+                        <td><code>else { ... }</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>while</code></td>
+                        <td>While loop</td>
+                        <td><code>while (x < 10) { ... }</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>for</code></td>
+                        <td>For loop</td>
+                        <td><code>for kas i = 1 to 10 { ... }</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>function</code></td>
+                        <td>Function definition</td>
+                        <td><code>function name(x) { ... }</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>return</code></td>
+                        <td>Return value</td>
+                        <td><code>return x + 1</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>input</code></td>
+                        <td>User input</td>
+                        <td><code>input("Prompt: ")</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>true</code> / <code>false</code></td>
+                        <td>Boolean values</td>
+                        <td><code>kas flag = true</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>and</code> / <code>or</code> / <code>not</code></td>
+                        <td>Logical operators</td>
+                        <td><code>x > 5 and y < 10</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>Operators</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Operators</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Arithmetic</strong></td>
+                        <td><code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>%</code></td>
+                        <td>Addition, subtraction, multiplication, division, modulo</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Comparison</strong></td>
+                        <td><code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code></td>
+                        <td>Equal, not equal, less than, greater than, etc.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Logical</strong></td>
+                        <td><code>and</code>, <code>or</code>, <code>not</code></td>
+                        <td>Logical AND, OR, NOT</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Assignment</strong></td>
+                        <td><code>=</code></td>
+                        <td>Variable assignment</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>Data Types</h3>
+            <ul style="margin-left: 30px; margin-top: 15px; line-height: 2;">
+                <li><strong>Numbers:</strong> <code>42</code>, <code>3.14</code> - integers and floating-point numbers</li>
+                <li><strong>Strings:</strong> <code>"hello"</code>, <code>'world'</code> - text enclosed in quotes</li>
+                <li><strong>Booleans:</strong> <code>true</code>, <code>false</code> - logical values</li>
+            </ul>
+            
+            <h3>Control Structures</h3>
+            <ul style="margin-left: 30px; margin-top: 15px; line-height: 2;">
+                <li><strong>If-Else:</strong> <code>if (condition) { ... } else { ... }</code></li>
+                <li><strong>While Loop:</strong> <code>while (condition) { ... }</code></li>
+                <li><strong>For Loop:</strong> <code>for kas i = start to end { ... }</code></li>
+                <li><strong>For Loop with Step:</strong> <code>for kas i = start to end step n { ... }</code></li>
+                <li><strong>Functions:</strong> <code>function name(params) { ... }</code></li>
+            </ul>
+        </section>
+        
+        <section class="section">
+            <h2>🎓 Learning Path</h2>
+            <p>Follow this learning path to master DoroLang:</p>
+            <ol style="margin-left: 30px; margin-top: 15px; line-height: 2;">
+                <li><strong>Start with basics:</strong> Learn how to use <code>say</code> and variables</li>
+                <li><strong>Master operators:</strong> Understand arithmetic, comparison, and logical operators</li>
+                <li><strong>Control flow:</strong> Learn if-else statements</li>
+                <li><strong>Loops:</strong> Practice with while and for loops</li>
+                <li><strong>Functions:</strong> Learn to define and use functions</li>
+                <li><strong>Input:</strong> Make your programs interactive</li>
+                <li><strong>Combine everything:</strong> Build complex programs using all concepts</li>
+            </ol>
+            
+            <div class="tip">
+Practice is key! Try modifying the examples, break them, fix them, and create your own programs. Start simple and gradually build more complex programs.
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>🚀 Getting Started</h2>
+            <h3>Running Your First Program</h3>
+            <ol style="margin-left: 30px; margin-top: 15px; line-height: 2;">
+                <li>Open DoroLang IDE: <code>python dorolang_ide.py</code></li>
+                <li>Type your code in the editor</li>
+                <li>Press <strong>F5</strong> to run</li>
+                <li>See the output in the console below</li>
+            </ol>
+            
+            <h3>Command Line Usage</h3>
+            <div class="code-block"><span class="comment"># Run a file</span>
+python main.py program.doro
+
+<span class="comment"># Interactive mode (REPL)</span>
+python main.py interactive</div>
+        </section>
+        
+        <footer>
+            <p><strong>DoroLang v1.4</strong> - Educational Programming Language</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                Features: Variables • Operators • Conditionals • Loops • Functions • Input • Complete IDE
+            </p>
+            <p>Created by <strong>Dorofii Karnaukh</strong></p>
+            <p style="margin-top: 15px; font-size: 0.9em;">
+                Happy coding! 🎉 | 
+                <a href="https://github.com" style="color: #667eea;">GitHub</a> | 
+                <a href="README.md" style="color: #667eea;">Documentation</a>
+            </p>
+        </footer>
+    </div>
+    
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+        
+        // Highlight current section in navigation
+        const sections = document.querySelectorAll('.section');
+        const navLinks = document.querySelectorAll('.nav a');
+        
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (window.pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+            
+            navLinks.forEach(link => {
+                link.style.background = '';
+                link.style.color = '';
+                if (link.getAttribute('href') === '#' + current) {
+                    link.style.background = '#667eea';
+                    link.style.color = 'white';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

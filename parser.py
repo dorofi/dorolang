@@ -1,16 +1,16 @@
 
 """
-DoroLang Parser - Синтаксический анализатор
-Строит абстрактное синтаксическое дерево (AST) из токенов
+DoroLang Parser - Syntax Analyzer
+Builds an Abstract Syntax Tree (AST) from tokens
 
-Автор: Dorofii Karnaukh
+Author: Dorofii Karnaukh
 """
 
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from dataclasses import dataclass
 
-# Импортируем токены из лексера
+# Import tokens from lexer
 from lexer import Token, TokenType
 
 
@@ -35,7 +35,7 @@ class Statement(ASTNode):
 
 @dataclass
 class NumberLiteral(Expression):
-    """Числовой литерал: 42, 3.14"""
+    """Numeric literal: 42, 3.14"""
     value: float
     
     def __str__(self):
@@ -44,7 +44,7 @@ class NumberLiteral(Expression):
 
 @dataclass
 class BooleanLiteral(Expression):
-    """Булев литерал: true, false"""
+    """Boolean literal: true, false"""
     value: bool
     
     def __str__(self):
@@ -53,7 +53,7 @@ class BooleanLiteral(Expression):
 
 @dataclass
 class StringLiteral(Expression):
-    """Строковый литерал: "hello", 'world'"""
+    """String literal: "hello", 'world'"""
     value: str
     
     def __str__(self):
@@ -62,7 +62,7 @@ class StringLiteral(Expression):
 
 @dataclass
 class Identifier(Expression):
-    """Идентификатор переменной: name, age"""
+    """Variable identifier: name, age"""
     name: str
     
     def __str__(self):
@@ -71,7 +71,7 @@ class Identifier(Expression):
 
 @dataclass
 class BinaryOperation(Expression):
-    """Бинарные операции: a + b, x * y, a and b"""
+    """Binary operations: a + b, x * y, a and b"""
     left: Expression
     operator: str
     right: Expression
@@ -82,7 +82,7 @@ class BinaryOperation(Expression):
 
 @dataclass
 class UnaryOperation(Expression):
-    """Унарные операции: -x, +y, not condition"""
+    """Unary operations: -x, +y, not condition"""
     operator: str
     operand: Expression
     
@@ -94,7 +94,7 @@ class UnaryOperation(Expression):
 class ParenthesizedExpression(Expression):
     expression: Expression
 
-# Новый AST-узел для input
+# New AST node for input
 @dataclass
 class InputCall(Expression):
     def __init__(self, prompt: Expression):
@@ -103,11 +103,22 @@ class InputCall(Expression):
         return f"Input({self.prompt})"
 
 
+@dataclass
+class FunctionCall(Expression):
+    """Function call: function_name(arg1, arg2, ...)"""
+    name: str
+    arguments: List[Expression]
+    
+    def __str__(self):
+        args_str = ", ".join(str(arg) for arg in self.arguments)
+        return f"Call({self.name}({args_str}))"
+
+
 # ============== STATEMENTS ==============
 
 @dataclass
 class SayStatement(Statement):
-    """Say утверждение: say expression"""
+    """Say statement: say expression"""
     expression: Expression
     
     def __str__(self):
@@ -116,7 +127,7 @@ class SayStatement(Statement):
 
 @dataclass
 class AssignmentStatement(Statement):
-    """Присваивание: kas name = expression"""
+    """Assignment: kas name = expression"""
     identifier: str
     expression: Expression
     
@@ -126,7 +137,7 @@ class AssignmentStatement(Statement):
 
 @dataclass
 class BlockStatement(Statement):
-    """Блок кода: { statement* }"""
+    """Code block: { statement* }"""
     statements: List[Statement]
     
     def __str__(self):
@@ -134,11 +145,32 @@ class BlockStatement(Statement):
 
 
 @dataclass
+class FunctionDefinition(Statement):
+    """Function definition: function name(params) { ... }"""
+    name: str
+    parameters: List[str]
+    body: BlockStatement
+    
+    def __str__(self):
+        params_str = ", ".join(self.parameters)
+        return f"Function({self.name}({params_str}))"
+
+
+@dataclass
+class ReturnStatement(Statement):
+    """Return statement: return expression"""
+    expression: Optional[Expression]
+    
+    def __str__(self):
+        return f"Return({self.expression})"
+
+
+@dataclass
 class IfStatement(Statement):
-    """If-Else утверждение"""
+    """If-Else statement"""
     condition: Expression
     then_branch: BlockStatement
-    else_branch: Optional[Statement]  # Может быть IfStatement или BlockStatement
+    else_branch: Optional[Statement]  # Can be IfStatement or BlockStatement
     
     def __str__(self):
         else_info = " with else" if self.else_branch else ""
@@ -146,8 +178,32 @@ class IfStatement(Statement):
 
 
 @dataclass
+class WhileStatement(Statement):
+    """While loop statement"""
+    condition: Expression
+    body: BlockStatement
+    
+    def __str__(self):
+        return f"While({self.condition})"
+
+
+@dataclass
+class ForStatement(Statement):
+    """For loop statement"""
+    variable: str
+    start: Expression
+    end: Expression
+    step: Optional[Expression]  # Optional step value
+    body: BlockStatement
+    
+    def __str__(self):
+        step_info = f", step {self.step}" if self.step else ""
+        return f"For({self.variable} from {self.start} to {self.end}{step_info})"
+
+
+@dataclass
 class Program(ASTNode):
-    """Корень программы - список утверждений"""
+    """Program root - list of statements"""
     statements: List[Statement]
     
     def __str__(self):
@@ -158,7 +214,7 @@ class Program(ASTNode):
 # ============== PARSER ==============
 
 class ParseError(Exception):
-    """Исключение для ошибок парсинга"""
+    """Exception for parsing errors"""
     def __init__(self, message: str, token: Token):
         self.message = message
         self.token = token
@@ -167,10 +223,10 @@ class ParseError(Exception):
 
 class Parser:
     """
-    Синтаксический анализатор для DoroLang
+    Syntax analyzer for DoroLang
     
-    Использует рекурсивный спуск для построения AST
-    Обновленная грамматика (приоритет операторов):
+    Uses recursive descent to build AST
+    Updated grammar (operator precedence):
     
     program         → statement*
     statement       → sayStatement | assignStatement | ifStatement | blockStatement
@@ -194,31 +250,31 @@ class Parser:
         self.position = 0
     
     def current_token(self) -> Token:
-        """Возвращает текущий токен"""
+        """Returns current token"""
         if self.position >= len(self.tokens):
-            return self.tokens[-1]  # EOF токен
+            return self.tokens[-1]  # EOF token
         return self.tokens[self.position]
     
     def peek_token(self, offset: int = 1) -> Token:
-        """Смотрит на токен впереди"""
+        """Looks ahead at token"""
         peek_pos = self.position + offset
         if peek_pos >= len(self.tokens):
-            return self.tokens[-1]  # EOF токен
+            return self.tokens[-1]  # EOF token
         return self.tokens[peek_pos]
     
     def advance(self) -> Token:
-        """Перемещается к следующему токену и возвращает предыдущий"""
+        """Moves to next token and returns previous"""
         current = self.current_token()
         if self.position < len(self.tokens) - 1:
             self.position += 1
         return current
     
     def match(self, *expected_types: TokenType) -> bool:
-        """Проверяет соответствие текущего токена любому из ожидаемых типов"""
+        """Checks if current token matches any of expected types"""
         return self.current_token().type in expected_types
     
     def consume(self, expected_type: TokenType, error_message: str = "") -> Token:
-        """Потребляет токен ожидаемого типа или выбрасывает ошибку"""
+        """Consumes token of expected type or raises error"""
         if self.match(expected_type):
             return self.advance()
         
@@ -229,23 +285,23 @@ class Parser:
         raise ParseError(error_message, self.current_token())
     
     def skip_newlines(self) -> None:
-        """Пропускает все токены новых строк"""
+        """Skips all newline tokens"""
         while self.match(TokenType.NEWLINE):
             self.advance()
     
     def parse(self) -> Program:
         """
-        Главный метод парсинга - парсит всю программу
+        Main parsing method - parses entire program
         
         Returns:
-            Program: Корневой узел AST
+            Program: Root AST node
             
         Raises:
-            ParseError: При синтаксических ошибках
+            ParseError: On syntax errors
         """
         statements = []
         
-        self.skip_newlines()  # Пропускаем пустые строки в начале
+        self.skip_newlines()  # Skip empty lines at start
         
         while not self.match(TokenType.EOF):
             if self.match(TokenType.NEWLINE):
@@ -253,15 +309,23 @@ class Parser:
                 continue
             
             stmt = self.parse_statement()
-            if stmt:  # Проверяем что утверждение не None
+            if stmt:  # Check that statement is not None
                 statements.append(stmt)
         
         return Program(statements)
     
     def parse_statement(self) -> Optional[Statement]:
-        """Парсит одно утверждение"""
-        if self.match(TokenType.IF):
+        """Parses one statement"""
+        if self.match(TokenType.FUNCTION):
+            return self.parse_function_definition()
+        elif self.match(TokenType.IF):
             return self.parse_if_statement()
+        elif self.match(TokenType.WHILE):
+            return self.parse_while_statement()
+        elif self.match(TokenType.FOR):
+            return self.parse_for_statement()
+        elif self.match(TokenType.RETURN):
+            return self.parse_return_statement()
         elif self.match(TokenType.SAY):
             return self.parse_say_statement()
         elif self.match(TokenType.KAS):
@@ -275,69 +339,152 @@ class Parser:
             )
     
     def parse_if_statement(self) -> IfStatement:
-        """Парсит if-else утверждение. Скобки вокруг условия опциональны."""
+        """Parses if-else statement. Parentheses around condition are optional."""
         self.consume(TokenType.IF, "Expected 'if'")
 
-        # Условие теперь парсится напрямую.
-        # Pratt-парсер сам обработает скобки, если они есть,
-        # так как '(' является префиксным оператором.
+        # Condition is now parsed directly.
+        # Pratt parser will handle parentheses if present,
+        # as '(' is a prefix operator.
         condition = self.parse_expression()
 
         then_branch = self.parse_block_statement()
 
         else_branch = None
         if self.match(TokenType.ELSE):
-            self.consume(TokenType.ELSE) # Потребляем 'else'
-            # То, что идет после 'else' - это просто еще одно утверждение
-            # (может быть как блоком {...}, так и другим if)
+            self.consume(TokenType.ELSE) # Consume 'else'
+            # What comes after 'else' is just another statement
+            # (can be a block {...} or another if)
             else_branch = self.parse_statement()
         return IfStatement(condition, then_branch, else_branch)
+    
+    def parse_while_statement(self) -> WhileStatement:
+        """Parses while loop statement"""
+        self.consume(TokenType.WHILE, "Expected 'while'")
+        condition = self.parse_expression()
+        body = self.parse_block_statement()
+        return WhileStatement(condition, body)
+    
+    def parse_for_statement(self) -> ForStatement:
+        """Parses for loop statement: for kas i = 1 to 10 { ... }"""
+        self.consume(TokenType.FOR, "Expected 'for'")
+        self.consume(TokenType.KAS, "Expected 'kas' after 'for'")
+        
+        # Get variable name
+        var_token = self.consume(TokenType.IDENTIFIER, "Expected variable name after 'kas'")
+        variable_name = var_token.value
+        
+        # Consume '='
+        self.consume(TokenType.ASSIGN, "Expected '=' after variable name")
+        
+        # Parse start value
+        start = self.parse_expression()
+        
+        # Consume 'to'
+        if not (self.match(TokenType.IDENTIFIER) and self.current_token().value == 'to'):
+            raise ParseError("Expected 'to' after start value", self.current_token())
+        self.advance()
+        
+        # Parse end value
+        end = self.parse_expression()
+        
+        # Optional step (step 2)
+        step = None
+        if self.match(TokenType.IDENTIFIER) and self.current_token().value == 'step':
+            self.advance()
+            step = self.parse_expression()
+        
+        # Parse body
+        body = self.parse_block_statement()
+        
+        return ForStatement(variable_name, start, end, step, body)
+    
+    def parse_function_definition(self) -> FunctionDefinition:
+        """Parses function definition: function name(param1, param2) { ... }"""
+        self.consume(TokenType.FUNCTION, "Expected 'function'")
+        
+        # Get function name
+        name_token = self.consume(TokenType.IDENTIFIER, "Expected function name")
+        function_name = name_token.value
+        
+        # Parse parameters
+        self.consume(TokenType.LPAREN, "Expected '(' after function name")
+        parameters = []
+        
+        if not self.match(TokenType.RPAREN):
+            while True:
+                param_token = self.consume(TokenType.IDENTIFIER, "Expected parameter name")
+                parameters.append(param_token.value)
+                
+                if self.match(TokenType.RPAREN):
+                    break
+                if self.match(TokenType.COMMA):
+                    self.advance()
+                else:
+                    break
+        
+        self.consume(TokenType.RPAREN, "Expected ')' after parameters")
+        
+        # Parse function body
+        body = self.parse_block_statement()
+        
+        return FunctionDefinition(function_name, parameters, body)
+    
+    def parse_return_statement(self) -> ReturnStatement:
+        """Parses return statement"""
+        self.consume(TokenType.RETURN, "Expected 'return'")
+        
+        # Check if return has no value (followed by newline or closing brace)
+        if self.match(TokenType.NEWLINE) or self.match(TokenType.RBRACE) or self.match(TokenType.EOF):
+            return ReturnStatement(None)
+        
+        expression = self.parse_expression()
+        return ReturnStatement(expression)
 
 
     def parse_block_statement(self) -> BlockStatement:
-        """Парсит блок кода: { ... }"""
+        """Parses code block: { ... }"""
         self.consume(TokenType.LBRACE)
-        self.skip_newlines()  # Разрешаем новые строки после '{'
+        self.skip_newlines()  # Allow newlines after '{'
         
         statements = []
         while not self.match(TokenType.RBRACE, TokenType.EOF):
             statements.append(self.parse_statement())
-            self.skip_newlines()  # Разрешаем новые строки после каждого утверждения
+            self.skip_newlines()  # Allow newlines after each statement
             
         self.consume(TokenType.RBRACE, "Expected '}' to close block")
         return BlockStatement(statements)
 
     def parse_say_statement(self) -> SayStatement:
-        """Парсит say утверждение"""
-        self.consume(TokenType.SAY)  # Потребляем 'say'
-        expression = self.parse_expression()  # Парсим выражение для вывода
+        """Parses say statement"""
+        self.consume(TokenType.SAY)  # Consume 'say'
+        expression = self.parse_expression()  # Parse expression for output
         return SayStatement(expression)
     
     def parse_assignment_statement(self) -> AssignmentStatement:
-        """Парсит присваивание: kas name = expression"""
-        self.consume(TokenType.KAS)  # Потребляем 'kas'
+        """Parses assignment: kas name = expression"""
+        self.consume(TokenType.KAS)  # Consume 'kas'
         
-        # Получаем имя переменной
+        # Get variable name
         identifier_token = self.consume(
             TokenType.IDENTIFIER, 
             "Expected variable name after 'kas'"
         )
         identifier_name = identifier_token.value
         
-        # Потребляем знак присваивания
+        # Consume assignment sign
         self.consume(TokenType.ASSIGN, "Expected '=' after variable name")
         
-        # Парсим выражение справа от =
+        # Parse expression on the right of =
         expression = self.parse_expression()
         
         return AssignmentStatement(identifier_name, expression)
     
     def parse_expression(self) -> Expression:
-        """Парсит выражение (точка входа в иерархию приоритетов)"""
+        """Parses expression (entry point to precedence hierarchy)"""
         return self.parse_logical_or()
     
     def parse_logical_or(self) -> Expression:
-        """Парсит логический OR (самый низкий приоритет)"""
+        """Parses logical OR (lowest precedence)"""
         left = self.parse_logical_and()
         
         while self.match(TokenType.OR):
@@ -348,7 +495,7 @@ class Parser:
         return left
     
     def parse_logical_and(self) -> Expression:
-        """Парсит логический AND"""
+        """Parses logical AND"""
         left = self.parse_equality()
         
         while self.match(TokenType.AND):
@@ -359,7 +506,7 @@ class Parser:
         return left
 
     def parse_equality(self) -> Expression:
-        """Парсит операторы равенства"""
+        """Parses equality operators"""
         left = self.parse_comparison()
         
         while self.match(TokenType.EQ, TokenType.NEQ):
@@ -370,7 +517,7 @@ class Parser:
         return left
 
     def parse_comparison(self) -> Expression:
-        """Парсит операторы сравнения"""
+        """Parses comparison operators"""
         left = self.parse_addition()
         
         while self.match(TokenType.LT, TokenType.GT, TokenType.LTE, TokenType.GTE):
@@ -381,7 +528,7 @@ class Parser:
         return left
     
     def parse_addition(self) -> Expression:
-        """Парсит сложение и вычитание"""
+        """Parses addition and subtraction"""
         left = self.parse_multiplication()
         
         while self.match(TokenType.PLUS, TokenType.MINUS):
@@ -392,7 +539,7 @@ class Parser:
         return left
     
     def parse_multiplication(self) -> Expression:
-        """Парсит умножение, деление и модulo"""
+        """Parses multiplication, division and modulo"""
         left = self.parse_unary()
         
         while self.match(TokenType.MULTIPLY, TokenType.DIVIDE, TokenType.MODULO):
@@ -403,50 +550,50 @@ class Parser:
         return left
     
     def parse_unary(self) -> Expression:
-        """Парсит унарные операции (включая логический NOT)"""
+        """Parses unary operations (including logical NOT)"""
         if self.match(TokenType.MINUS, TokenType.PLUS, TokenType.NOT):
             operator = self.advance().value
-            operand = self.parse_unary()  # Рекурсивный вызов для поддержки --x и not not x
+            operand = self.parse_unary()  # Recursive call to support --x and not not x
             return UnaryOperation(operator, operand)
         
         return self.parse_primary()
     
     def parse_primary(self) -> Expression:
-        """Парсит первичные выражения"""
+        """Parses primary expressions"""
         # input("...")
         if self.match(TokenType.INPUT):
             self.advance()  # consume 'input'
             self.consume(TokenType.LPAREN, "Expected '(' after input")
-            # Проверяем, есть ли выражение внутри скобок
+            # Check if there's an expression inside parentheses
             if self.match(TokenType.RPAREN):
                 self.advance()  # consume ')'
-                # Пустой prompt
+                # Empty prompt
                 return InputCall(StringLiteral("") )
             else:
                 prompt_expr = self.parse_expression()
                 self.consume(TokenType.RPAREN, "Expected ')' after input prompt")
                 return InputCall(prompt_expr)
 
-        # Скобки
+        # Parentheses
         if self.match(TokenType.LPAREN):
             self.advance()  # consume '('
             expr = self.parse_expression()
             self.consume(TokenType.RPAREN, "Expected ')' after expression")
             return ParenthesizedExpression(expr)
 
-        # Числа
+        # Numbers
         elif self.match(TokenType.NUMBER):
             token = self.advance()
             return NumberLiteral(float(token.value))
 
-        # Строки
+        # Strings
         elif self.match(TokenType.STRING):
             token = self.advance()
-            # Обрабатываем строковый литерал (убираем кавычки и escape)
+            # Process string literal (remove quotes and handle escape)
             string_value = self._process_string_literal(token.value)
             return StringLiteral(string_value)
 
-        # Булевы значения
+        # Boolean values
         elif self.match(TokenType.TRUE):
             self.advance()
             return BooleanLiteral(True)
@@ -455,10 +602,32 @@ class Parser:
             self.advance()
             return BooleanLiteral(False)
 
-        # Идентификаторы (переменные)
+        # Identifiers (variables or function calls)
         elif self.match(TokenType.IDENTIFIER):
             token = self.advance()
-            return Identifier(token.value)
+            identifier_name = token.value
+            
+            # Check if it's a function call
+            if self.match(TokenType.LPAREN):
+                self.advance()  # consume '('
+                arguments = []
+                
+                if not self.match(TokenType.RPAREN):
+                    while True:
+                        arguments.append(self.parse_expression())
+                        if self.match(TokenType.RPAREN):
+                            break
+                        # Check for comma
+                        if self.match(TokenType.COMMA):
+                            self.advance()
+                        else:
+                            break
+                
+                self.consume(TokenType.RPAREN, "Expected ')' after function arguments")
+                return FunctionCall(identifier_name, arguments)
+            else:
+                # Regular variable
+                return Identifier(identifier_name)
 
         else:
             raise ParseError(
@@ -467,11 +636,11 @@ class Parser:
             )
     
     def _process_string_literal(self, raw_string: str) -> str:
-        """Обрабатывает строковый литерал (убирает кавычки и обрабатывает escape)"""
-        # Убираем внешние кавычки
+        """Processes string literal (removes quotes and handles escape sequences)"""
+        # Remove outer quotes
         content = raw_string[1:-1]
         
-        # Простая обработка escape-последовательностей
+        # Simple escape sequence handling
         content = content.replace('\\n', '\n')
         content = content.replace('\\t', '\t')
         content = content.replace('\\r', '\r')
@@ -482,7 +651,7 @@ class Parser:
         return content
     
     def pretty_print_ast(self, node: ASTNode, indent: int = 0) -> None:
-        """Красиво выводит AST дерево"""
+        """Pretty prints AST tree"""
         prefix = "  " * indent
         
         if isinstance(node, Program):
@@ -507,6 +676,25 @@ class Parser:
             if node.else_branch:
                 print(f"{prefix}  Else:")
                 self.pretty_print_ast(node.else_branch, indent + 2)
+        
+        elif isinstance(node, WhileStatement):
+            print(f"{prefix}WhileStatement:")
+            print(f"{prefix}  Condition:")
+            self.pretty_print_ast(node.condition, indent + 2)
+            print(f"{prefix}  Body:")
+            self.pretty_print_ast(node.body, indent + 2)
+        
+        elif isinstance(node, ForStatement):
+            print(f"{prefix}ForStatement: {node.variable}")
+            print(f"{prefix}  Start:")
+            self.pretty_print_ast(node.start, indent + 2)
+            print(f"{prefix}  End:")
+            self.pretty_print_ast(node.end, indent + 2)
+            if node.step:
+                print(f"{prefix}  Step:")
+                self.pretty_print_ast(node.step, indent + 2)
+            print(f"{prefix}  Body:")
+            self.pretty_print_ast(node.body, indent + 2)
         
         elif isinstance(node, BlockStatement):
             print(f"{prefix}Block:")
@@ -541,18 +729,18 @@ class Parser:
             print(f"{prefix}Variable: {node.name}")
 
 
-# Тестирование модуля
+# Module testing
 if __name__ == "__main__":
     from lexer import Lexer
     
-    # Тестовый код с новыми возможностями
+    # Test code with new features
     test_code = '''
 say "Enhanced Parser test!"
 kas x = 5
 kas y = 3
 kas z = true
 
-# Тест логических операторов
+# Test logical operators
 kas result1 = x > y and z
 kas result2 = x < y or not z
 kas complex = (x + y) > 5 and (not z or y == 3)
@@ -561,7 +749,7 @@ say "result1 = " + result1
 say "result2 = " + result2
 say "complex = " + complex
 
-# Тест if-else с логическими выражениями
+# Test if-else with logical expressions
 if (x > y and z) {
     say "Both conditions are true!"
     kas message = "Success!"
@@ -570,7 +758,7 @@ if (x > y and z) {
     kas message = "Failed"
 }
 
-# Вложенные if-else
+# Nested if-else
 if (x > 10) {
     say "x is big"
 } else {
@@ -588,12 +776,12 @@ if (x > 10) {
     print("\n" + "="*40)
     
     try:
-        # Токенизация
+        # Tokenization
         lexer = Lexer(test_code)
         tokens = lexer.tokenize()
         print(f"✅ Lexer: {len(tokens)} tokens")
         
-        # Парсинг
+        # Parsing
         parser = Parser(tokens)
         ast = parser.parse()
         print(f"✅ Parser: {len(ast.statements)} statements")

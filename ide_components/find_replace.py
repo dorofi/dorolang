@@ -2,13 +2,13 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 class FindReplaceDialog(tk.Toplevel):
-    """Диалоговое окно для поиска и замены"""
+    """Dialog window for find and replace"""
     def __init__(self, parent, editor, replace_mode=False):
         super().__init__(parent)
         self.parent = parent
         self.editor = editor
         
-        self.title("Найти и Заменить" if replace_mode else "Найти")
+        self.title("Find and Replace" if replace_mode else "Find")
         self.transient(parent)
         self.resizable(False, False)
         
@@ -32,24 +32,24 @@ class FindReplaceDialog(tk.Toplevel):
     def create_widgets(self, replace_mode):
         self.main_frame = ttk.Frame(self, padding="10")
         
-        ttk.Label(self.main_frame, text="Найти:").grid(row=0, column=0, sticky="w", pady=2)
+        ttk.Label(self.main_frame, text="Find:").grid(row=0, column=0, sticky="w", pady=2)
         self.find_entry = ttk.Entry(self.main_frame, textvariable=self.find_text, width=40)
         
         if replace_mode:
-            ttk.Label(self.main_frame, text="Заменить на:").grid(row=1, column=0, sticky="w", pady=2)
+            ttk.Label(self.main_frame, text="Replace with:").grid(row=1, column=0, sticky="w", pady=2)
             self.replace_entry = ttk.Entry(self.main_frame, textvariable=self.replace_text, width=40)
         
         self.options_frame = ttk.Frame(self.main_frame)
-        self.case_check = ttk.Checkbutton(self.options_frame, text="Учитывать регистр", variable=self.match_case)
-        self.wrap_check = ttk.Checkbutton(self.options_frame, text="Искать с начала", variable=self.wrap_around)
+        self.case_check = ttk.Checkbutton(self.options_frame, text="Match case", variable=self.match_case)
+        self.wrap_check = ttk.Checkbutton(self.options_frame, text="Wrap around", variable=self.wrap_around)
         
         self.button_frame = ttk.Frame(self)
-        self.find_button = ttk.Button(self.button_frame, text="Найти далее", command=self.find_next)
-        self.cancel_button = ttk.Button(self.button_frame, text="Отмена", command=self.close_dialog)
+        self.find_button = ttk.Button(self.button_frame, text="Find Next", command=self.find_next)
+        self.cancel_button = ttk.Button(self.button_frame, text="Cancel", command=self.close_dialog)
         
         if replace_mode:
-            self.replace_button = ttk.Button(self.button_frame, text="Заменить", command=self.replace)
-            self.replace_all_button = ttk.Button(self.button_frame, text="Заменить все", command=self.replace_all)
+            self.replace_button = ttk.Button(self.button_frame, text="Replace", command=self.replace)
+            self.replace_all_button = ttk.Button(self.button_frame, text="Replace All", command=self.replace_all)
 
     def layout_widgets(self, replace_mode):
         self.main_frame.pack(fill="both", expand=True)
@@ -78,7 +78,7 @@ class FindReplaceDialog(tk.Toplevel):
         pos = text_widget.search(query, start_pos, stopindex=tk.END, nocase=not self.match_case.get())
         
         if not pos and self.wrap_around.get():
-            if messagebox.askyesno("Поиск", "Достигнут конец файла. Продолжить с начала?", parent=self):
+            if messagebox.askyesno("Search", "Reached end of file. Continue from beginning?", parent=self):
                 pos = text_widget.search(query, "1.0", stopindex=start_pos, nocase=not self.match_case.get())
         
         if pos:
@@ -89,7 +89,7 @@ class FindReplaceDialog(tk.Toplevel):
             text_widget.see(pos)
             self.lift()
         else:
-            messagebox.showinfo("Поиск", f"Не удалось найти '{query}'", parent=self)
+            messagebox.showinfo("Search", f"Could not find '{query}'", parent=self)
 
     def replace(self):
         text_widget = self.editor.text_area
@@ -128,7 +128,7 @@ class FindReplaceDialog(tk.Toplevel):
             start_pos = f"{pos}+{len(replacement)}c"
             count += 1
             
-        messagebox.showinfo("Заменить все", f"Выполнено замен: {count}", parent=self)
+        messagebox.showinfo("Replace All", f"Replaced {count} occurrences", parent=self)
         self.close_dialog()
 
     def close_dialog(self):

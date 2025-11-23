@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 """
-DoroLang - Главный модуль
-Точка входа в интерпретатор языка DoroLang
+DoroLang - Main Module
+Entry point for the DoroLang language interpreter
 
-Использование:
-    python main.py                    # Примеры
-    python main.py interactive        # Интерактивный режим
-    python main.py examples           # Все примеры
-    python main.py test              # Тестирование
-    python main.py program.doro       # Запуск файла
+Usage:
+    python main.py                    # Examples
+    python main.py interactive        # Interactive mode
+    python main.py examples           # All examples
+    python main.py test              # Testing
+    python main.py program.doro       # Run file
 
-Автор: Dorofii Karnaukh
+Author: Dorofii Karnaukh
 """
 
 import sys
 import os
 from typing import List, Optional
 
-# Импортируем наши модули
+# Import our modules
 from lexer import Lexer, LexerError
 from parser import Parser, ParseError
 from interpreter import Interpreter, RuntimeError as DoroRuntimeError
@@ -25,9 +25,9 @@ from interpreter import Interpreter, RuntimeError as DoroRuntimeError
 
 class DoroLang:
     """
-    Главный класс интерпретатора DoroLang
+    Main DoroLang interpreter class
     
-    Координирует работу лексера, парсера и интерпретатора
+    Coordinates the work of lexer, parser, and interpreter
     """
     
     def __init__(self):
@@ -38,17 +38,17 @@ class DoroLang:
     
     def run(self, source_code: str, show_details: bool = False) -> List[str]:
         """
-        Выполняет код на DoroLang
+        Executes DoroLang code
         
         Args:
-            source_code: Исходный код программы
-            show_details: Показывать ли подробности выполнения
+            source_code: Source code of the program
+            show_details: Whether to show execution details
             
         Returns:
-            List[str]: Вывод программы
+            List[str]: Program output
         """
         try:
-            # Лексический анализ
+            # Lexical analysis
             if show_details:
                 print("🔍 Lexical Analysis...")
             
@@ -57,14 +57,14 @@ class DoroLang:
             
             if show_details:
                 print(f"   Found {len(tokens)} tokens")
-                # Показываем первые несколько токенов
+                # Show first few tokens
                 for i, token in enumerate(tokens[:5]):
                     if token.type.name != 'EOF':
                         print(f"     {i}: {token.type.name} '{token.value}'")
                 if len(tokens) > 6:
-                    print(f"     ... и еще {len(tokens) - 5} токенов")
+                    print(f"     ... and {len(tokens) - 5} more tokens")
             
-            # Синтаксический анализ
+            # Syntax analysis
             if show_details:
                 print("🌳 Parsing...")
             
@@ -74,7 +74,7 @@ class DoroLang:
             if show_details:
                 print(f"   Built AST with {len(ast.statements)} statements")
             
-            # Интерпретация
+            # Interpretation
             if show_details:
                 print("🚀 Executing...")
                 print("-" * 30)
@@ -85,7 +85,7 @@ class DoroLang:
                 print("-" * 30)
                 print("✅ Execution completed!")
                 
-                # Показываем переменные если они есть
+                # Show variables if any
                 variables = self.interpreter.get_variables()
                 if variables:
                     print("\n📊 Final variables:")
@@ -116,7 +116,7 @@ class DoroLang:
     
     def run_interactive(self) -> None:
         """
-        Интерактивный режим (REPL - Read-Eval-Print Loop)
+        Interactive mode (REPL - Read-Eval-Print Loop)
         """
         print("=" * 60)
         print(f"🎉 DoroLang Interactive Mode v{self.version}")
@@ -124,17 +124,17 @@ class DoroLang:
         print("-" * 60)
         print("Commands:")
         print("  Type DoroLang code and press Enter to execute")
-        print("  'exit' or 'quit' - выйти")
-        print("  'vars' - показать переменные")
-        print("  'clear' - очистить переменные")
-        print("  'help' - показать эту справку")
+        print("  'exit' or 'quit' - exit")
+        print("  'vars' - show variables")
+        print("  'clear' - clear variables")
+        print("  'help' - show this help")
         print("=" * 60)
         
         while True:
             try:
                 line = input("DoroLang> ").strip()
                 
-                # Команды
+                # Commands
                 if line.lower() in ['exit', 'quit']:
                     print("👋 Goodbye!")
                     break
@@ -170,7 +170,7 @@ class DoroLang:
                 elif not line:
                     continue
                 
-                # Выполняем код
+                # Execute code
                 self.run(line, show_details=False)
                 
             except KeyboardInterrupt:
@@ -182,10 +182,10 @@ class DoroLang:
     
     def run_file(self, filepath: str) -> None:
         """
-        Запускает файл DoroLang
+        Runs a DoroLang file
         
         Args:
-            filepath: Путь к файлу
+            filepath: Path to the file
         """
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
@@ -203,7 +203,7 @@ class DoroLang:
 
 
 def run_examples() -> None:
-    """Демонстрация возможностей DoroLang"""
+    """Demonstrates DoroLang capabilities"""
     
     examples = [
         ("Hello World", '''
@@ -391,7 +391,7 @@ if (not zero and not empty) {
         print(f"\n🚀 Output:")
         print("-" * 40)
         
-        # Сбрасываем переменные для каждого примера
+        # Reset variables for each example
         dorolang.interpreter.reset()
         dorolang.run(code.strip(), show_details=False)
         
@@ -399,7 +399,7 @@ if (not zero and not empty) {
 
 
 def show_usage() -> None:
-    """Показывает справку по использованию"""
+    """Shows usage help"""
     print(f"DoroLang Programming Language Interpreter v1.1.0")
     print("Created by Dorofii Karnaukh")
     print()
@@ -427,7 +427,7 @@ def show_usage() -> None:
 
 
 def run_tests() -> None:
-    """Запускает расширенные тесты DoroLang"""
+    """Runs extended DoroLang tests"""
     print("🧪 Running Enhanced DoroLang tests...")
     print("=" * 50)
     
@@ -442,25 +442,25 @@ def run_tests() -> None:
         ("Mixed types", 'say "Result: " + (2 + 3)'),
         ("Complex expression", 'kas x = -(2 + 3) * 4 % 7\nsay x'),
         
-        # Новые тесты для логики
+        # New tests for logic
         ("Boolean literals", 'kas a = true\nkas b = false\nsay a\nsay b'),
         ("Logical AND", 'kas result = true and false\nsay result'),
         ("Logical OR", 'kas result = true or false\nsay result'),
         ("Logical NOT", 'kas result = not true\nsay result'),
         ("Complex logic", 'kas x = 5 > 3 and 2 < 4\nsay x'),
         
-        # Тесты условий
+        # Conditional tests
         ("Simple if-true", 'if (true) {\nsay "true branch"\n}'),
         ("Simple if-false", 'if (false) {\nsay "true branch"\n} else {\nsay "false branch"\n}'),
         ("Comparison in if", 'kas x = 10\nif (x > 5) {\nsay "x is big"\n}'),
         ("Complex condition", 'kas x = 5\nkas y = 3\nif (x > y and x < 10) {\nsay "condition met"\n}'),
         
-        # Тесты истинности
+        # Truthiness tests
         ("Zero truthiness", 'if (not 0) {\nsay "zero is falsy"\n}'),
         ("String truthiness", 'if ("hello") {\nsay "string is truthy"\n}'),
         ("Empty string", 'if (not "") {\nsay "empty string is falsy"\n}'),
         
-        # Тесты типов
+        # Type tests
         ("Boolean to string", 'say "Value: " + true'),
         ("Number comparison", 'say 10 > 5'),
         ("String equality", 'say "hello" == "hello"'),
@@ -496,10 +496,10 @@ def run_tests() -> None:
 
 
 def main() -> None:
-    """Главная функция"""
+    """Main function"""
     
     if len(sys.argv) == 1:
-        # Без аргументов - показываем примеры
+        # No arguments - show examples
         print("🎉 DoroLang Programming Language v1.1.0")
         print("   Enhanced with Boolean Logic & Conditionals!")
         run_examples()
@@ -523,7 +523,7 @@ def main() -> None:
             show_usage()
             
         else:
-            # Предполагаем что это файл
+            # Assume it's a file
             if os.path.exists(sys.argv[1]):
                 dorolang = DoroLang()
                 dorolang.run_file(sys.argv[1])

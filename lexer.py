@@ -1,8 +1,8 @@
 """
-DoroLang Lexer - Лексический анализатор
-Отвечает за разбор исходного кода на токены
+DoroLang Lexer - Lexical Analyzer
+Responsible for parsing source code into tokens
 
-Автор: Dorofii Karnaukh
+Author: Dorofii Karnaukh
 """
 
 import re
@@ -12,27 +12,31 @@ from typing import List, Optional
 
 
 class TokenType(Enum):
-    """Типы токенов в DoroLang"""
-    # Литералы
+    """Token types in DoroLang"""
+    # Literals
     NUMBER = auto()
     STRING = auto()
     IDENTIFIER = auto()
     
-    # Ключевые слова
+    # Keywords
     SAY = auto()        # say
     KAS = auto()        # kas
     IF = auto()         # if
-    INPUT = auto()      # input (НОВОЕ)
+    WHILE = auto()      # while
+    FOR = auto()        # for
+    FUNCTION = auto()   # function (NEW)
+    RETURN = auto()     # return (NEW)
+    INPUT = auto()      # input
     ELSE = auto()       # else
     TRUE = auto()       # true
     FALSE = auto()      # false
     
-    # Логические операторы (НОВЫЕ)
+    # Logical operators (NEW)
     AND = auto()        # and
     OR = auto()         # or
     NOT = auto()        # not
     
-    # Операторы
+    # Operators
     ASSIGN = auto()     # =
     PLUS = auto()       # +
     MINUS = auto()      # -
@@ -40,7 +44,7 @@ class TokenType(Enum):
     DIVIDE = auto()     # /
     MODULO = auto()     # %
     
-    # Операторы сравнения
+    # Comparison operators
     EQ = auto()         # ==
     NEQ = auto()        # !=
     LT = auto()         # <
@@ -48,13 +52,14 @@ class TokenType(Enum):
     LTE = auto()        # <=
     GTE = auto()        # >=
     
-    # Разделители
+    # Delimiters
     LPAREN = auto()     # (
     RPAREN = auto()     # )
     LBRACE = auto()     # {
     RBRACE = auto()     # }
+    COMMA = auto()      # , (NEW)
     
-    # Специальные
+    # Special
     NEWLINE = auto()
     EOF = auto()
     UNKNOWN = auto()
@@ -62,7 +67,7 @@ class TokenType(Enum):
 
 @dataclass
 class Token:
-    """Представление одного токена"""
+    """Representation of a single token"""
     type: TokenType
     value: str
     line: int
@@ -73,7 +78,7 @@ class Token:
 
 
 class LexerError(Exception):
-    """Исключение лексера"""
+    """Lexer exception"""
     def __init__(self, message: str, line: int, column: int):
         self.message = message
         self.line = line
@@ -83,9 +88,9 @@ class LexerError(Exception):
 
 class Lexer:
     """
-    Лексический анализатор для DoroLang
+    Lexical analyzer for DoroLang
     
-    Преобразует исходный код в последовательность токенов
+    Converts source code into a sequence of tokens
     """
     
     def __init__(self, source_code: str):
@@ -95,32 +100,36 @@ class Lexer:
         self.column = 1
         self.tokens: List[Token] = []
         
-        # Паттерны для токенов (порядок важен!)
+        # Token patterns (order matters!)
         self.token_patterns = [
-            # Ключевые слова (должны быть перед идентификаторами)
+            # Keywords (must be before identifiers)
             (r'say\b', TokenType.SAY),
             (r'kas\b', TokenType.KAS),
             (r'if\b', TokenType.IF),
-            (r'input\b', TokenType.INPUT),  # НОВЫЙ
+            (r'while\b', TokenType.WHILE),
+            (r'for\b', TokenType.FOR),
+            (r'function\b', TokenType.FUNCTION),  # NEW
+            (r'return\b', TokenType.RETURN),      # NEW
+            (r'input\b', TokenType.INPUT),
             (r'else\b', TokenType.ELSE),
             (r'true\b', TokenType.TRUE),
             (r'false\b', TokenType.FALSE),
-            (r'and\b', TokenType.AND),      # НОВЫЙ
-            (r'or\b', TokenType.OR),        # НОВЫЙ
-            (r'not\b', TokenType.NOT),      # НОВЫЙ
+            (r'and\b', TokenType.AND),
+            (r'or\b', TokenType.OR),
+            (r'not\b', TokenType.NOT),
             
-            # Литералы
+            # Literals
             (r'\d+\.?\d*', TokenType.NUMBER),
             (r'"(?:[^"\\]|\\.)*"', TokenType.STRING),
             (r"'(?:[^'\\]|\\.)*'", TokenType.STRING),
             (r'[a-zA-Z_][a-zA-Z0-9_]*', TokenType.IDENTIFIER),
             
-            # Операторы (двухсимвольные сначала)
+            # Operators (two-character first)
             (r'==', TokenType.EQ),
             (r'!=', TokenType.NEQ),
             (r'<=', TokenType.LTE),
             (r'>=', TokenType.GTE),
-            (r'=', TokenType.ASSIGN), # Односимвольный = после ==
+            (r'=', TokenType.ASSIGN), # Single-character = after ==
             (r'\+', TokenType.PLUS),
             (r'-', TokenType.MINUS),
             (r'\*', TokenType.MULTIPLY),
@@ -129,31 +138,32 @@ class Lexer:
             (r'<', TokenType.LT),
             (r'>', TokenType.GT),
             
-            # Разделители
+            # Delimiters
             (r'\(', TokenType.LPAREN),
             (r'\)', TokenType.RPAREN),
             (r'\{', TokenType.LBRACE),
             (r'\}', TokenType.RBRACE),
+            (r',', TokenType.COMMA),  # NEW
             
-            # Специальные
+            # Special
             (r'\n', TokenType.NEWLINE),
         ]
     
     def current_char(self) -> Optional[str]:
-        """Возвращает текущий символ или None если достигли конца"""
+        """Returns current character or None if end reached"""
         if self.position >= len(self.source):
             return None
         return self.source[self.position]
     
     def peek_char(self, offset: int = 1) -> Optional[str]:
-        """Смотрит на символ впереди без перемещения позиции"""
+        """Looks ahead at character without moving position"""
         peek_pos = self.position + offset
         if peek_pos >= len(self.source):
             return None
         return self.source[peek_pos]
     
     def advance(self) -> None:
-        """Перемещаемся к следующему символу"""
+        """Moves to next character"""
         if self.position < len(self.source):
             if self.source[self.position] == '\n':
                 self.line += 1
@@ -163,46 +173,46 @@ class Lexer:
             self.position += 1
     
     def skip_whitespace(self) -> None:
-        """Пропускаем пробелы и табы (но не новые строки)"""
+        """Skips spaces and tabs (but not newlines)"""
         while (self.current_char() is not None and 
                self.current_char() in ' \t\r'):
             self.advance()
     
     def skip_comment(self) -> None:
-        """Пропускаем комментарии начинающиеся с #"""
+        """Skips comments starting with #"""
         if self.current_char() == '#':
-            # Пропускаем до конца строки
+            # Skip until end of line
             while (self.current_char() is not None and 
                    self.current_char() != '\n'):
                 self.advance()
     def tokenize(self) -> List[Token]:
         """
-        Основной метод токенизации
+        Main tokenization method
         
         Returns:
-            List[Token]: Список токенов
+            List[Token]: List of tokens
             
         Raises:
-            LexerError: При ошибках лексического анализа
+            LexerError: On lexical analysis errors
         """
         self.tokens = []
         
         while self.position < len(self.source):
             self.skip_whitespace()
             
-            # Конец файла
+            # End of file
             if self.current_char() is None:
                 break
             
-            # Комментарии
+            # Comments
             if self.current_char() == '#':
                 self.skip_comment()
                 continue
             
-            # Сохраняем текущую позицию для токена
+            # Save current position for token
             token_line = self.line
             token_column = self.column
-            # Пробуем найти совпадение с регулярными выражениями
+            # Try to find match with regular expressions
             found_match = False
             remaining_source = self.source[self.position:]
             
@@ -212,7 +222,7 @@ class Lexer:
                     token_value = match.group(0)
                     self.tokens.append(Token(token_type, token_value, token_line, token_column))
                     
-                    # Перемещаем позицию
+                    # Move position
                     for _ in range(len(token_value)):
                         self.advance()
                     
@@ -220,34 +230,34 @@ class Lexer:
                     break
             
             if not found_match:
-                # Неизвестный символ
+                # Unknown character
                 unknown_char = self.current_char()
                 raise LexerError(
                     f"Unknown character '{unknown_char}'",
                     self.line, self.column
                 )
         
-        # Добавляем EOF токен
+        # Add EOF token
         self.tokens.append(Token(TokenType.EOF, '', self.line, self.column))
         return self.tokens
     
     def print_tokens(self) -> None:
-        """Красиво выводим все токены для отладки"""
+        """Pretty prints all tokens for debugging"""
         print("=== TOKENS ===")
         for i, token in enumerate(self.tokens):
             print(f"{i:2}: {token}")
 
 
-# Тестирование модуля
+# Module testing
 if __name__ == "__main__":
-    # Тестовый код с новыми возможностями
+    # Test code with new features
     test_code = '''
-# Комментарий - тест логических операторов
+# Comment - test logical operators
 say "Hello, DoroLang!"
 kas x = 42
 kas y = (x + 10) % 3
 
-# Тест булевых значений и логических операторов
+# Test boolean values and logical operators
 kas is_big = x > 30
 kas is_small = y < 5
 kas result = is_big and is_small
@@ -258,52 +268,52 @@ if (result) {
     say "At least one condition is false"
 }
 
-# Тест оператора not
+# Test not operator
 kas negative_result = not result
 say "Negative result: " + negative_result
 
-# Тест оператора or
+# Test or operator
 if (is_big or is_small) {
     say "At least one is true"
 }
 '''
 
-    # Более детальный тест для строк, чтобы убедиться, что ничего не сломалось
+    # More detailed test for strings to ensure nothing broke
     string_test_code = '''
-say "простая строка"
-say 'и в одинарных кавычках'
-say "строка с \\"экранированной кавычкой\\""
-say 'и в одинарных \\'тоже\\''
-say "пустая строка: """
-kas my_string="строкабезпробела"
+say "simple string"
+say 'and in single quotes'
+say "string with \\"escaped quote\\""
+say 'and in single \\'too\\''
+say "empty string: """
+kas my_string="stringwithoutspace"
 '''
 
     input_test_code = '''
-# Тест новой функции input
-kas user_name = input("Как тебя зовут? ")
-say "Привет, " + user_name + "!"
+# Test new input function
+kas user_name = input("What is your name? ")
+say "Hello, " + user_name + "!"
 '''
 
     def run_lexer_test(name, code):
-        """Вспомогательная функция для запуска тестов и вывода результата"""
-        print(f"\n===== ЗАПУСК ТЕСТА: {name} =====")
-        print("Исходный код:")
+        """Helper function to run tests and output results"""
+        print(f"\n===== RUNNING TEST: {name} =====")
+        print("Source code:")
         print(code)
         print("-" * 20)
         try:
             lexer = Lexer(code)
             tokens = lexer.tokenize()
             lexer.print_tokens()
-            print(f"\n✅ Тест '{name}' пройден! Найдено {len(tokens)} токенов.")
+            print(f"\n✅ Test '{name}' passed! Found {len(tokens)} tokens.")
         except LexerError as e:
-            print(f"❌ Ошибка лексера в тесте '{name}': {e}")
+            print(f"❌ Lexer error in test '{name}': {e}")
         except Exception as e:
-            print(f"❌ Неожиданная ошибка: {e}")
+            print(f"❌ Unexpected error: {e}")
 
     
-    print("="*20 + " ТЕСТИРОВАНИЕ ЛЕКСЕРА " + "="*20)
+    print("="*20 + " LEXER TESTING " + "="*20)
 
-    # Запускаем оба теста
-    run_lexer_test("Логические операторы", test_code)
-    run_lexer_test("Парсинг строк", string_test_code)
-    run_lexer_test("Функция Input", input_test_code)
+    # Run both tests
+    run_lexer_test("Logical Operators", test_code)
+    run_lexer_test("String Parsing", string_test_code)
+    run_lexer_test("Input Function", input_test_code)

@@ -1,0 +1,321 @@
+# ============================================
+# INTERACTIVE ADVENTURE GAME
+# Complete game showcasing all DoroLang features
+# ============================================
+
+say "╔═══════════════════════════════════════╗"
+say "║      🎮 ADVENTURE QUEST 🎮             ║"
+say "║   An Epic DoroLang Adventure          ║"
+say "╚═══════════════════════════════════════╝"
+say ""
+
+# Game state
+kas player_name = ""
+kas player_health = 100
+kas player_gold = 50
+kas player_level = 1
+kas player_exp = 0
+
+# Inventory
+kas has_sword = false
+kas has_shield = false
+kas potions = 0
+
+# Game functions
+function show_status() {
+    say ""
+    say "═══════════════════════════════════════"
+    say "📊 YOUR STATUS"
+    say "═══════════════════════════════════════"
+    say "Name: " + player_name
+    say "Health: " + player_health + "/100"
+    say "Gold: " + player_gold
+    say "Level: " + player_level
+    say "Experience: " + player_exp + "/100"
+    say ""
+    say "Inventory:"
+    if (has_sword) {
+        say "  ⚔️  Sword"
+    } else {
+        say "  ⚔️  Sword (none)"
+    }
+    if (has_shield) {
+        say "  🛡️  Shield"
+    } else {
+        say "  🛡️  Shield (none)"
+    }
+    say "  🧪 Potions: " + potions
+    say "═══════════════════════════════════════"
+}
+
+function level_up() {
+    if (player_exp >= 100) {
+        kas player_level = player_level + 1
+        kas player_exp = player_exp - 100
+        kas player_health = 100
+        say ""
+        say "🎉 LEVEL UP! You are now level " + player_level + "!"
+        say "Your health has been restored!"
+    }
+}
+
+function take_damage(amount) {
+    kas player_health = player_health - amount
+    if (player_health < 0) {
+        kas player_health = 0
+    }
+}
+
+function heal(amount) {
+    kas player_health = player_health + amount
+    if (player_health > 100) {
+        kas player_health = 100
+    }
+}
+
+function gain_gold(amount) {
+    kas player_gold = player_gold + amount
+    say "💰 You gained " + amount + " gold!"
+}
+
+function gain_exp(amount) {
+    kas player_exp = player_exp + amount
+    say "⭐ You gained " + amount + " experience!"
+    kas _result = level_up()
+}
+
+function battle_monster() {
+    say ""
+    say "⚔️  BATTLE STARTED!"
+    say ""
+    
+    kas monster_health = 50 + (player_level * 10)
+    kas monster_damage = 10 + player_level
+    kas reward_gold = 20 + (player_level * 5)
+    kas reward_exp = 30 + (player_level * 10)
+    
+    say "A wild monster appears!"
+    say "Monster Health: " + monster_health
+    say ""
+    
+    kas battle_round = 1
+    
+    while (monster_health > 0 and player_health > 0) {
+        say "--- Round " + battle_round + " ---"
+        
+        # Player attack
+        kas player_damage = 15 + (player_level * 5)
+        if (has_sword) {
+            kas player_damage = player_damage + 10
+        }
+        
+        kas monster_health = monster_health - player_damage
+        say "You attack for " + player_damage + " damage!"
+        
+        if (monster_health <= 0) {
+            say "💀 Monster defeated!"
+            kas _result = gain_gold(reward_gold)
+            kas _result = gain_exp(reward_exp)
+            return true
+        }
+        
+        say "Monster Health: " + monster_health
+        
+        # Monster attack
+        kas actual_damage = monster_damage
+        if (has_shield) {
+            kas actual_damage = actual_damage - 5
+            if (actual_damage < 0) {
+                kas actual_damage = 0
+            }
+        }
+        
+        kas _result = take_damage(actual_damage)
+        say "Monster attacks for " + actual_damage + " damage!"
+        say "Your Health: " + player_health
+        
+        if (player_health <= 0) {
+            say ""
+            say "💀 You have been defeated!"
+            return false
+        }
+        
+        kas battle_round = battle_round + 1
+        say ""
+    }
+    
+    return false
+}
+
+function visit_shop() {
+    say ""
+    say "🏪 WELCOME TO THE SHOP"
+    say "═══════════════════════════════════════"
+    say "Your gold: " + player_gold
+    say ""
+    say "1. Sword - 100 gold"
+    say "2. Shield - 80 gold"
+    say "3. Health Potion - 20 gold"
+    say "4. Leave shop"
+    say ""
+    
+    kas choice_str = input("What would you like to buy? (1-4): ")
+    kas choice = choice_str
+    
+    if (choice == 1) {
+        if (has_sword) {
+            say "You already have a sword!"
+        } else {
+            if (player_gold >= 100) {
+                kas player_gold = player_gold - 100
+                kas has_sword = true
+                say "⚔️  You bought a sword!"
+            } else {
+                say "Not enough gold! You need 100 gold."
+            }
+        }
+    } else {
+        if (choice == 2) {
+            if (has_shield) {
+                say "You already have a shield!"
+            } else {
+                if (player_gold >= 80) {
+                    kas player_gold = player_gold - 80
+                    kas has_shield = true
+                    say "🛡️  You bought a shield!"
+                } else {
+                    say "Not enough gold! You need 80 gold."
+                }
+            }
+        } else {
+            if (choice == 3) {
+                if (player_gold >= 20) {
+                    kas player_gold = player_gold - 20
+                    kas potions = potions + 1
+                    say "🧪 You bought a health potion!"
+                } else {
+                    say "Not enough gold! You need 20 gold."
+                }
+            }
+        }
+    }
+}
+
+function use_potion() {
+    if (potions > 0) {
+        kas potions = potions - 1
+        kas _result = heal(30)
+        say "🧪 You used a health potion! Health restored by 30."
+        say "Current health: " + player_health
+    } else {
+        say "You don't have any potions!"
+    }
+}
+
+function explore() {
+    say ""
+    say "🗺️  EXPLORING..."
+    say ""
+    
+    # Simulate random event
+    kas event_roll = player_level * 10
+    
+    if (event_roll > 30) {
+        say "✨ You found a treasure chest!"
+        kas _result1 = gain_gold(30 + (player_level * 5))
+        kas _result2 = gain_exp(20)
+    } else {
+        if (event_roll > 15) {
+            say "⚔️  A monster appears!"
+            kas _battle_result = battle_monster()
+        } else {
+            say "🌲 You explore peacefully but find nothing."
+        }
+    }
+}
+
+function show_main_menu() {
+    say ""
+    say "═══════════════════════════════════════"
+    say "📍 MAIN MENU"
+    say "═══════════════════════════════════════"
+    say "1. Show Status"
+    say "2. Explore"
+    say "3. Visit Shop"
+    say "4. Use Potion"
+    say "5. Battle Monster"
+    say "6. Quit Game"
+    say ""
+}
+
+# Game start
+say "Welcome, brave adventurer!"
+kas player_name = input("What is your name? ")
+
+say ""
+say "Welcome, " + player_name + "!"
+say "Your adventure begins now!"
+say ""
+
+kas game_running = true
+
+while (game_running and player_health > 0) {
+    kas _result = show_main_menu()
+    kas choice_str = input("What would you like to do? (1-6): ")
+    kas choice = choice_str
+    
+    if (choice == 1) {
+        kas _status = show_status()
+    } else {
+        if (choice == 2) {
+            kas _explore = explore()
+        } else {
+            if (choice == 3) {
+                kas _shop = visit_shop()
+            } else {
+                if (choice == 4) {
+                    kas _potion = use_potion()
+                } else {
+                    if (choice == 5) {
+                        kas _battle = battle_monster()
+                    } else {
+                        if (choice == 6) {
+                            say ""
+                            say "Thanks for playing, " + player_name + "!"
+                            say "Your final stats:"
+                            kas _final_status = show_status()
+                            kas game_running = false
+                        } else {
+                            say "Invalid choice! Please try again."
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    # Check if player died
+    if (player_health <= 0) {
+        say ""
+        say "💀 GAME OVER"
+        say "You have been defeated in battle!"
+        say "Better luck next time, " + player_name + "!"
+    }
+}
+
+say ""
+say "═══════════════════════════════════════"
+say "🎮 Game Features Demonstrated:"
+say "═══════════════════════════════════════"
+say "  ✅ Complex game state management"
+say "  ✅ Multiple functions with parameters"
+say "  ✅ Conditional logic (if-else chains)"
+say "  ✅ Loops (while, for)"
+say "  ✅ Nested structures"
+say "  ✅ User input/output"
+say "  ✅ Calculations and logic"
+say "  ✅ Boolean flags"
+say "═══════════════════════════════════════"
+say ""
+say "Thanks for playing Adventure Quest! 🎉"
+

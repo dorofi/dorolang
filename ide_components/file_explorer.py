@@ -71,12 +71,12 @@ class FileExplorer:
                 if is_dir:
                     self.process_directory(node_id, abs_path)
         except PermissionError:
-            self.tree.insert(parent_id, 'end', text="🚫 Доступ запрещен")
+            self.tree.insert(parent_id, 'end', text="🚫 Access denied")
         except Exception as e:
-            print(f"Ошибка обработки директории {path}: {e}")
+            print(f"Error processing directory {path}: {e}")
 
     def on_double_click(self, event):
-        """Обработчик двойного клика для открытия файла"""
+        """Double-click handler for opening file"""
         try:
             item_id = self.tree.identify_row(event.y)
             if item_id:
@@ -84,34 +84,34 @@ class FileExplorer:
                 if path and Path(path).is_file():
                     self.ide.open_file_from_path(path)
         except Exception as e:
-            print(f"Ошибка открытия файла из проводника: {e}")
+            print(f"Error opening file from explorer: {e}")
 
     def create_context_menu(self):
-        """Создает контекстное меню для дерева файлов"""
+        """Creates context menu for file tree"""
         self.context_menu = tk.Menu(self.tree, tearoff=0)
-        self.context_menu.add_command(label="Новый файл...", command=self.new_file)
-        self.context_menu.add_command(label="Новая папка...", command=self.new_folder)
+        self.context_menu.add_command(label="New File...", command=self.new_file)
+        self.context_menu.add_command(label="New Folder...", command=self.new_folder)
         self.context_menu.add_separator()
-        self.context_menu.add_command(label="Переименовать...", command=self.rename_item)
-        self.context_menu.add_command(label="Удалить", command=self.delete_item)
+        self.context_menu.add_command(label="Rename...", command=self.rename_item)
+        self.context_menu.add_command(label="Delete", command=self.delete_item)
         self.context_menu.add_separator()
-        self.context_menu.add_command(label="Обновить", command=self.refresh_tree)
+        self.context_menu.add_command(label="Refresh", command=self.refresh_tree)
         
         self.tree.bind("<Button-3>", self.show_context_menu)
 
     def show_context_menu(self, event):
-        """Показывает контекстное меню при правом клике"""
+        """Shows context menu on right click"""
         item_id = self.tree.identify_row(event.y)
         if item_id:
             self.tree.selection_set(item_id)
             self.selected_item_id = item_id
             is_root = self.tree.parent(item_id) == ""
-            self.context_menu.entryconfig("Переименовать...", state="disabled" if is_root else "normal")
-            self.context_menu.entryconfig("Удалить", state="disabled" if is_root else "normal")
+            self.context_menu.entryconfig("Rename...", state="disabled" if is_root else "normal")
+            self.context_menu.entryconfig("Delete", state="disabled" if is_root else "normal")
             self.context_menu.post(event.x_root, event.y_root)
 
     def get_selected_path(self):
-        """Получает путь к папке, в которой нужно создать новый элемент"""
+        """Gets path to folder where new item should be created"""
         if not self.selected_item_id: return self.root_path
         path = Path(self.path_map.get(self.selected_item_id))
         return path if path.is_dir() else path.parent
@@ -120,34 +120,34 @@ class FileExplorer:
     def new_file(self):
         target_dir = self.get_selected_path()
         if not target_dir: return False
-        file_name = simpledialog.askstring("Новый файл", "Введите имя файла:", parent=self.ide)
+        file_name = simpledialog.askstring("New File", "Enter file name:", parent=self.ide)
         if file_name:
             try:
                 new_path = Path(target_dir) / file_name
                 if new_path.exists():
-                    messagebox.showwarning("Ошибка", "Файл с таким именем уже существует.", parent=self.ide)
+                    messagebox.showwarning("Error", "File with this name already exists.", parent=self.ide)
                     return False
                 else:
-                    new_path.touch() # Создает пустой файл
+                    new_path.touch() # Creates empty file
                     self.ide.open_file_from_path(new_path)
                     return True
             except OSError as e:
-                messagebox.showerror("Ошибка", f"Не удалось создать файл: {e}", parent=self.ide)
+                messagebox.showerror("Error", f"Failed to create file: {e}", parent=self.ide)
         return False
 
     @refresh_on_success
     def new_folder(self):
         target_dir = self.get_selected_path()
         if not target_dir: return False
-        folder_name = simpledialog.askstring("Новая папка", "Введите имя папки:", parent=self.ide)
+        folder_name = simpledialog.askstring("New Folder", "Enter folder name:", parent=self.ide)
         if folder_name:
             try:
                 (Path(target_dir) / folder_name).mkdir(exist_ok=False)
                 return True
             except FileExistsError:
-                messagebox.showwarning("Ошибка", "Папка с таким именем уже существует.", parent=self.ide)
+                messagebox.showwarning("Error", "Folder with this name already exists.", parent=self.ide)
             except OSError as e:
-                messagebox.showerror("Ошибка", f"Не удалось создать папку: {e}", parent=self.ide)
+                messagebox.showerror("Error", f"Failed to create folder: {e}", parent=self.ide)
         return False
 
     @refresh_on_success
@@ -155,7 +155,7 @@ class FileExplorer:
         path_str = self.path_map.get(self.selected_item_id)
         if not path_str: return False
         path_to_delete = Path(path_str)
-        if messagebox.askyesno("Подтверждение", f"Вы уверены, что хотите удалить '{path_to_delete.name}'?", parent=self.ide):
+        if messagebox.askyesno("Confirmation", f"Are you sure you want to delete '{path_to_delete.name}'?", parent=self.ide):
             try:
                 if path_to_delete.is_file():
                     path_to_delete.unlink()
@@ -163,7 +163,7 @@ class FileExplorer:
                     shutil.rmtree(path_to_delete)
                 return True
             except OSError as e:
-                messagebox.showerror("Ошибка", f"Не удалось удалить: {e}", parent=self.ide)
+                messagebox.showerror("Error", f"Failed to delete: {e}", parent=self.ide)
         return False
 
     @refresh_on_success
@@ -172,13 +172,13 @@ class FileExplorer:
         if not old_path_str: return False
         old_path = Path(old_path_str)
         old_name = old_path.name
-        new_name = simpledialog.askstring("Переименовать", "Введите новое имя:", initialvalue=old_name, parent=self.ide)
+        new_name = simpledialog.askstring("Rename", "Enter new name:", initialvalue=old_name, parent=self.ide)
         if new_name and new_name != old_name:
             try:
                 old_path.rename(old_path.with_name(new_name))
                 return True
             except OSError as e:
-                messagebox.showerror("Ошибка", f"Не удалось переименовать: {e}", parent=self.ide)
+                messagebox.showerror("Error", f"Failed to rename: {e}", parent=self.ide)
         return False
 
     def refresh_tree(self):

@@ -4,7 +4,7 @@ import re
 import traceback
 
 class SyntaxHighlighter:
-    """Улучшенная подсветка синтаксиса для DoroLang с поддержкой новых возможностей"""
+    """Enhanced syntax highlighting for DoroLang with support for new features"""
     
     def __init__(self, text_widget, initial_colors):
         self.text_widget = text_widget
@@ -14,14 +14,14 @@ class SyntaxHighlighter:
         self.highlight_job = None
 
     def setup_tags(self):
-        """Настройка тегов для подсветки"""
+        """Setup tags for highlighting"""
         base_font = ("Consolas", 11)
         bold_font = (base_font[0], base_font[1], "bold")
         italic_font = (base_font[0], base_font[1], "italic")
 
         try:
             self.text_widget.tag_config("keyword", foreground=self.colors['keyword'], font=bold_font)
-            self.text_widget.tag_config("input", foreground="#A259FF", font=bold_font)  # Фиолетовый
+            self.text_widget.tag_config("input", foreground="#A259FF", font=bold_font)  # Purple
             self.text_widget.tag_config("logical", foreground=self.colors['logical'], font=bold_font)
             self.text_widget.tag_config("boolean", foreground=self.colors['boolean'], font=bold_font)
             self.text_widget.tag_config("string", foreground=self.colors['string'])
@@ -30,11 +30,11 @@ class SyntaxHighlighter:
             self.text_widget.tag_config("operator", foreground=self.colors['operator'])
             self.text_widget.tag_config("delimiter", foreground=self.colors['delimiter'])
         except Exception as e:
-            print(f"Предупреждение: Ошибка настройки тегов подсветки: {e}")
+            print(f"Warning: Error setting up highlight tags: {e}")
     
     def compile_regex(self):
-        """Компиляция регулярного выражения с поддержкой новых токенов"""
-        keywords = ['say', 'kas', 'if', 'else', 'input']
+        """Compile regular expression with support for new tokens"""
+        keywords = ['say', 'kas', 'if', 'else', 'while', 'for', 'function', 'return', 'input', 'to', 'step']
         logical_ops = ['and', 'or', 'not']
         boolean_values = ['true', 'false']
 
@@ -60,19 +60,19 @@ class SyntaxHighlighter:
         self.regex = re.compile('|'.join(f'(?P<{name}>{pattern})' for name, pattern in token_patterns))
 
     def highlight(self):
-        """Запускает отложенную подсветку синтаксиса"""
+        """Starts delayed syntax highlighting"""
         if self.highlight_job:
             self.text_widget.after_cancel(self.highlight_job)
         self.highlight_job = self.text_widget.after(100, self.apply_highlight)
 
     def apply_theme(self, colors):
-        """Применяет новую цветовую схему"""
+        """Applies new color scheme"""
         self.colors = colors
         self.setup_tags()
         self.highlight()
 
     def apply_highlight(self):
-        """Применяет улучшенную подсветку синтаксиса ко всему тексту"""
+        """Applies enhanced syntax highlighting to entire text"""
         try:
             tags_to_remove = ["keyword", "logical", "boolean", "string", "number", "comment", "operator", "delimiter", "input"]
             for tag in tags_to_remove:
@@ -96,7 +96,7 @@ class SyntaxHighlighter:
 
 
 class AutocompleteWindow(tk.Toplevel):
-    """Выпадающее окно для автодополнения"""
+    """Dropdown window for autocomplete"""
     def __init__(self, parent, matches, completion_callback, close_callback):
         super().__init__(parent)
         self.completion_callback = completion_callback
@@ -125,7 +125,7 @@ class AutocompleteWindow(tk.Toplevel):
         self.destroy()
 
 class CodeEditor:
-    """Улучшенный редактор кода с поддержкой автодополнения"""
+    """Enhanced code editor with autocomplete support"""
     
     def __init__(self, parent, initial_colors):
         self.parent = parent
@@ -137,7 +137,7 @@ class CodeEditor:
         self.setup_editor()
     
     def setup_editor(self):
-        """Настройка редактора"""
+        """Setup editor"""
         try:
             editor_frame = tk.Frame(self.frame)
             editor_frame.pack(fill=tk.BOTH, expand=True)
@@ -168,8 +168,11 @@ class CodeEditor:
             self.text_area.bind('<<Modified>>', self.on_modified)
             self.text_area.bind('<Control-space>', self.show_autocomplete)
 
-            # Тег для подсветки скобок
+            # Tag for bracket highlighting
             self.text_area.tag_configure("match")
+            
+            # Tag for error line highlighting
+            self.text_area.tag_configure("error_line", background="#ffcccc")
             
             self.text_area.config(yscrollcommand=self.sync_scroll)
             
@@ -177,12 +180,12 @@ class CodeEditor:
             self.apply_theme(self.colors)
             
         except Exception as e:
-            print(f"Ошибка настройки редактора: {e}")
+            print(f"Error setting up editor: {e}")
             traceback.print_exc()
             raise
 
     def apply_theme(self, colors):
-        """Применяет новую цветовую схему к редактору"""
+        """Applies new color scheme to editor"""
         self.colors = colors
         self.text_area.config(
             background=colors['editor_bg'],
@@ -199,10 +202,16 @@ class CodeEditor:
         self.highlighter.apply_theme(colors)
     
     def show_autocomplete(self, event=None):
-        """Показывает выпадающий список автодополнения"""
+        """Shows autocomplete dropdown list with keywords and variables"""
         self._close_autocomplete()
         try:
-            keywords = ['say', 'kas', 'if', 'else', 'true', 'false', 'and', 'or', 'not', 'input']
+            keywords = ['say', 'kas', 'if', 'else', 'while', 'for', 'function', 'return', 'true', 'false', 'and', 'or', 'not', 'input', 'to', 'step']
+            
+            # Extract variables from current file
+            all_text = self.text_area.get("1.0", tk.END)
+            variable_pattern = r'\bkas\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*='
+            variables = list(set(re.findall(variable_pattern, all_text)))
+            
             current_pos = self.text_area.index(tk.INSERT)
             line_start = current_pos.rsplit('.', 1)[0] + '.0'
             line_text = self.text_area.get(line_start, current_pos)
@@ -210,7 +219,13 @@ class CodeEditor:
             words = re.findall(r'\w+', line_text)
             if words:
                 self.partial_word = words[-1]
-                matches = [kw for kw in keywords if kw.startswith(self.partial_word)]
+                
+                # Match both keywords and variables
+                keyword_matches = [kw for kw in keywords if kw.startswith(self.partial_word)]
+                variable_matches = [var for var in variables if var.startswith(self.partial_word)]
+                
+                # Combine and sort (keywords first, then variables)
+                matches = keyword_matches + variable_matches
                 
                 if matches:
                     if len(matches) == 1 and matches[0] == self.partial_word:
@@ -224,10 +239,10 @@ class CodeEditor:
                     self.autocomplete_window.geometry(f"+{x}+{y}")
                     self.autocomplete_window.listbox.focus_set()
         except Exception as e:
-            print(f"Ошибка автодополнения: {e}")
+            print(f"Autocomplete error: {e}")
 
     def _insert_completion(self, value):
-        """Вставляет выбранное слово"""
+        """Inserts selected word"""
         try:
             start_pos = self.text_area.index(f"{tk.INSERT} - {len(self.partial_word)} chars")
             self.text_area.delete(start_pos, tk.INSERT)
@@ -243,7 +258,7 @@ class CodeEditor:
             self.autocomplete_window = None
     
     def sync_scroll(self, *args):
-        """Синхронизация прокрутки номеров строк и текста"""
+        """Synchronize scrolling of line numbers and text"""
         try:
             self.line_numbers.yview_moveto(args[0])
             if hasattr(self.text_area, 'vbar'):
@@ -252,7 +267,7 @@ class CodeEditor:
             print(f"Ошибка синхронизации прокрутки: {e}")
     
     def on_key_release(self, event=None):
-        """Обновление после нажатия клавиши"""
+        """Update after key press"""
         try:
             self._close_autocomplete()
             self.update_line_numbers()
@@ -264,7 +279,7 @@ class CodeEditor:
             print(f"Ошибка обработки нажатия клавиши: {e}")
     
     def on_click(self, event=None):
-        """Обновление после клика мыши"""
+        """Update after mouse click"""
         try:
             self._close_autocomplete()
             self.update_line_numbers()
@@ -275,7 +290,7 @@ class CodeEditor:
             print(f"Ошибка обработки клика: {e}")
     
     def on_mousewheel(self, event=None):
-        """Синхронизация при прокрутке колесом"""
+        """Synchronize when scrolling with wheel"""
         try:
             self.text_area.yview_scroll(int(-1 * (event.delta / 120)), "units")
             self._close_autocomplete()
@@ -284,7 +299,7 @@ class CodeEditor:
             print(f"Ошибка прокрутки: {e}")
     
     def on_modified(self, event=None):
-        """Обработчик изменения текста"""
+        """Text change handler"""
         try:
             if not self.is_modified:
                 self.is_modified = True
@@ -294,7 +309,7 @@ class CodeEditor:
             print(f"Ошибка обработки изменений: {e}")
     
     def update_line_numbers(self):
-        """Обновление номеров строк"""
+        """Update line numbers"""
         try:
             self.line_numbers.config(state=tk.NORMAL)
             self.line_numbers.delete("1.0", tk.END)
@@ -308,7 +323,7 @@ class CodeEditor:
             print(f"Ошибка обновления номеров строк: {e}")
     
     def get_text(self):
-        """Получить весь текст"""
+        """Get all text"""
         try:
             return self.text_area.get("1.0", tk.END + "-1c")
         except Exception as e:
@@ -316,7 +331,7 @@ class CodeEditor:
             return ""
     
     def set_text(self, text):
-        """Установить текст"""
+        """Set text"""
         try:
             self.text_area.delete("1.0", tk.END)
             self.text_area.insert("1.0", text)
@@ -327,7 +342,7 @@ class CodeEditor:
             print(f"Ошибка установки текста: {e}")
     
     def get_cursor_position(self):
-        """Получить позицию курсора"""
+        """Get cursor position"""
         try:
             return self.text_area.index(tk.INSERT)
         except Exception as e:
@@ -335,15 +350,15 @@ class CodeEditor:
             return "1.0"
 
     def highlight_matching_bracket(self, event=None):
-        """Подсветка парных скобок"""
+        """Highlight matching brackets"""
         self.text_area.tag_remove("match", "1.0", tk.END)
 
         cursor_pos = self.text_area.index(tk.INSERT)
         
-        # Проверяем символ перед курсором
+        # Check character before cursor
         char_before = self.text_area.get(f"{cursor_pos}-1c", cursor_pos)
         
-        # Проверяем символ после курсора
+        # Check character after cursor
         char_after = self.text_area.get(cursor_pos, f"{cursor_pos}+1c")
 
         brackets = {'(': ')', '[': ']', '{': '}', ')': '(', ']': '[', '}': '{'}
@@ -360,14 +375,14 @@ class CodeEditor:
                 self.text_area.tag_add("match", match_pos, f"{match_pos}+1c")
 
     def _find_bracket_match(self, start_pos, match_char):
-        """Ищет парную скобку"""
+        """Finds matching bracket"""
         start_char = self.text_area.get(start_pos, f"{start_pos}+1c")
         
-        if start_char in "([{": # Поиск вперед
+        if start_char in "([{": # Search forward
             direction = 1
             end_pos = tk.END
             current_pos = f"{start_pos}+1c"
-        elif start_char in ")]}": # Поиск назад
+        elif start_char in ")]}": # Search backward
             direction = -1
             end_pos = "1.0"
             current_pos = f"{start_pos}-1c"

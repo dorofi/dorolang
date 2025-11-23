@@ -5,16 +5,16 @@ import traceback
 from ide_settings import THEMES
 
 class Console:
-    """Улучшенная консоль для вывода результатов"""
+    """Enhanced console for output results"""
     
     def __init__(self, parent):
         self.frame = ttk.Frame(parent)
         self.setup_console()
     
     def setup_console(self):
-        """Настройка консоли"""
+        """Setup console"""
         try:
-            self.colors = THEMES['light'] # Временное значение до применения темы
+            self.colors = THEMES['light'] # Temporary value until theme is applied
 
             self.header_frame = ttk.Frame(self.frame)
             self.header_frame.pack(fill=tk.X, padx=5, pady=(5, 0))
@@ -40,7 +40,7 @@ class Console:
             raise
 
     def apply_theme(self, colors):
-        """Применяет новую цветовую схему к консоли"""
+        """Applies new color scheme to console"""
         self.colors = colors
         self.console_text.config(
             background=colors['console_bg'],
@@ -56,7 +56,7 @@ class Console:
         self.console_text.tag_config("number", foreground=colors['console_number'])
     
     def write(self, text, tag="output"):
-        """Запись текста в консоль с улучшенным форматированием"""
+        """Write text to console with enhanced formatting"""
         try:
             self.console_text.config(state=tk.NORMAL)
             
@@ -72,10 +72,10 @@ class Console:
             self.console_text.config(state=tk.DISABLED)
             self.console_text.update()
         except Exception as e:
-            print(f"Ошибка записи в консоль: {e}")
+            print(f"Error writing to console: {e}")
     
     def clear(self):
-        """Очистка консоли"""
+        """Clear console"""
         try:
             self.console_text.config(state=tk.NORMAL)
             self.console_text.delete("1.0", tk.END)
